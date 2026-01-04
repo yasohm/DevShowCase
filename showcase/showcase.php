@@ -46,8 +46,12 @@ try {
     $projects = $stmt->fetchAll();
     
     foreach ($projects as &$project) {
-        if ($project['screenshot_url'] && strpos($project['screenshot_url'], 'http') === false) {
-             $project['screenshot_url'] = getRelativeUrlPath($project['screenshot_url']);
+        if (!empty($project['screenshot'])) {
+            if (strpos($project['screenshot'], 'http') === 0) {
+                $project['screenshot_url'] = $project['screenshot'];
+            } else {
+                $project['screenshot_url'] = getRelativeUrlPath($project['screenshot']);
+            }
         }
         $project['author_name'] = trim(($project['first_name'] ?? '') . ' ' . ($project['last_name'] ?? '')) ?: $project['username'];
     }

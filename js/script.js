@@ -33,7 +33,8 @@ function initializeApp() {
     } else if (currentPage.includes('documents')) {
         loadDocuments();
     } else if (currentPage.includes('view.html')) {
-        // loadViewer is called via inline script in view.html, but we can call it here too if needed
+        console.log('Loading Viewer...');
+        loadViewer();
     }
 }
 
@@ -1608,9 +1609,10 @@ async function loadViewer() {
         });
 
         if (!response.ok) throw new Error('Data not found');
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data || result; // Handle both wrapped and unwrapped data
 
-        if (data.success) {
+        if (result.success) {
             if (type === 'member') {
                 displayMemberView(data.user, data.skills || []);
             } else if (type === 'project') {

@@ -128,7 +128,7 @@ function getProject($projectId, $allowPublic = false) {
     try {
         if ($allowPublic) {
             $stmt = $pdo->prepare("
-                SELECT p.id, p.user_id, p.title, p.description, p.technologies, p.github_url, p.screenshot, p.category, 
+                SELECT p.id, p.user_id, p.title, p.description, p.technologies, p.github_url, p.screenshot, 
                        p.created_at, p.updated_at, u.username, u.first_name, u.last_name
                 FROM projects p
                 JOIN users u ON p.user_id = u.id
@@ -137,7 +137,7 @@ function getProject($projectId, $allowPublic = false) {
             $stmt->execute([$projectId]);
         } else {
             $stmt = $pdo->prepare("
-                SELECT id, user_id, title, description, technologies, github_url, screenshot, category, 
+                SELECT id, user_id, title, description, technologies, github_url, screenshot, 
                        created_at, updated_at
                 FROM projects 
                 WHERE id = ? AND user_id = ?
