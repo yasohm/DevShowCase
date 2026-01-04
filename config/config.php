@@ -27,13 +27,23 @@ define('MAX_PROFILE_IMAGE_SIZE', 5 * 1024 * 1024);  // 5MB for profile images
 define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']);
 define('ALLOWED_DOCUMENT_TYPES', [
     'application/pdf',
+    'application/x-pdf',
+    'application/acrobat',
+    'applications/vnd.pdf',
+    'text/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
     'image/png',
     'image/jpeg',
-    'image/jpg'
+    'image/jpg',
+    'image/gif',
+    'image/webp',
+    'text/plain',
+    'application/octet-stream' // Fallback for some browsers
 ]);
 
 /**
@@ -59,8 +69,12 @@ function getDBConnection() {
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,  // Use native prepared statements
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
         ];
+        
+        // Only set if constant exists (to avoid errors in some environments)
+        if (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
+            $options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES utf8mb4";
+        }
         
         // Create PDO instance
         $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);

@@ -43,12 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'];
     
     if ($action === 'update_profile') {
-        // Update basic profile information
-        $firstName = sanitizeInput($_POST['first_name'] ?? '');
-        $lastName = sanitizeInput($_POST['last_name'] ?? '');
-        $bio = sanitizeTextarea($_POST['bio'] ?? '');
-        $githubUrl = sanitizeInput($_POST['github_url'] ?? '');
-        $jobTitle = sanitizeInput($_POST['job_title'] ?? '');
+        // Update basic profile information - use existing data if not provided in POST (partial update)
+        $firstName = isset($_POST['first_name']) ? sanitizeInput($_POST['first_name']) : $userData['first_name'];
+        $lastName = isset($_POST['last_name']) ? sanitizeInput($_POST['last_name']) : $userData['last_name'];
+        $bio = isset($_POST['bio']) ? sanitizeTextarea($_POST['bio']) : $userData['bio'];
+        $githubUrl = isset($_POST['github_url']) ? sanitizeInput($_POST['github_url']) : $userData['github_url'];
+        $jobTitle = isset($_POST['job_title']) ? sanitizeInput($_POST['job_title']) : $userData['job_title'];
         
         // Validate GitHub URL if provided
         if (!empty($githubUrl) && !validateURL($githubUrl)) {

@@ -94,9 +94,15 @@ function getProjects() {
         foreach ($projects as &$project) {
             $project['technologies'] = parseTechnologies($project['technologies']);
             
-            // Get relative URL for screenshot if exists
+            // Handle screenshot URL - check if it's external URL or local path
             if ($project['screenshot']) {
-                $project['screenshot_url'] = getRelativeUrlPath($project['screenshot']);
+                // If it's already a full URL, use it directly
+                if (filter_var($project['screenshot'], FILTER_VALIDATE_URL)) {
+                    $project['screenshot_url'] = $project['screenshot'];
+                } else {
+                    // It's a local file path, convert to relative URL
+                    $project['screenshot_url'] = getRelativeUrlPath($project['screenshot']);
+                }
             }
         }
         
@@ -132,9 +138,13 @@ function getProject($projectId) {
         // Parse technologies
         $project['technologies'] = parseTechnologies($project['technologies']);
         
-        // Get relative URL for screenshot if exists
+        // Handle screenshot URL - check if it's external URL or local path
         if ($project['screenshot']) {
-            $project['screenshot_url'] = getRelativeUrlPath($project['screenshot']);
+            if (filter_var($project['screenshot'], FILTER_VALIDATE_URL)) {
+                $project['screenshot_url'] = $project['screenshot'];
+            } else {
+                $project['screenshot_url'] = getRelativeUrlPath($project['screenshot']);
+            }
         }
         
         jsonResponse(true, 'Project retrieved successfully', ['project' => $project]);
@@ -169,6 +179,12 @@ function createProject() {
     if (!empty($githubUrl) && !validateURL($githubUrl)) {
         $errors[] = 'Invalid GitHub URL format.';
     }
+
+    // Capture screenshot URL from input (if provided)
+    $screenshotUrl = sanitizeInput($_POST['screenshot_url'] ?? '');
+    if (!empty($screenshotUrl) && !validateURL($screenshotUrl)) {
+        $errors[] = 'Invalid Screenshot URL format.';
+    }
     
     // Handle screenshot upload (optional)
     $screenshotPath = null;
@@ -186,6 +202,9 @@ function createProject() {
                 $screenshotPath = $uploadResult['file_path'];
             }
         }
+    } else if (!empty($screenshotUrl)) {
+        // Use provided URL if no file uploaded
+        $screenshotPath = $screenshotUrl;
     }
     
     // Process technologies
@@ -294,6 +313,12 @@ function updateProject($projectId) {
     if (!empty($githubUrl) && !validateURL($githubUrl)) {
         $errors[] = 'Invalid GitHub URL format.';
     }
+
+    // Capture screenshot URL from input (if provided)
+    $screenshotUrl = sanitizeInput($_POST['screenshot_url'] ?? '');
+    if (!empty($screenshotUrl) && !validateURL($screenshotUrl)) {
+        $errors[] = 'Invalid Screenshot URL format.';
+    }
     
     // Handle screenshot upload (optional - new or replacement)
     $screenshotPath = $existingProject['screenshot'];
@@ -315,6 +340,15 @@ function updateProject($projectId) {
                 $screenshotPath = $uploadResult['file_path'];
             }
         }
+    } else if (!empty($screenshotUrl)) {
+        // Use provided URL if no file uploaded
+        // Note: We don't delete old local file if switching to URL, or maybe we should?
+        // Let's be safe and only delete if we are SURE. But logic suggests if we replace screenshot, we should clean up.
+        // If old screenshot was a local file, delete it.
+        if ($screenshotPath && file_exists($screenshotPath) && !filter_var($screenshotPath, FILTER_VALIDATE_URL)) {
+             deleteFile($screenshotPath);
+        }
+        $screenshotPath = $screenshotUrl;
     }
     
     // Process technologies

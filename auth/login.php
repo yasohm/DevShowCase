@@ -10,14 +10,13 @@ require_once __DIR__ . '/../helpers/helpers.php';
 // Check if request is AJAX
 $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest');
 
-// If already logged in, redirect to profile
-if (isLoggedIn()) {
+// If already logged in, redirect to profile (only for GET requests)
+if (isLoggedIn() && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     if ($isAjax) {
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'redirect' => 'profile.html']);
+        jsonResponse(true, 'Already logged in', ['redirect' => '../profile/profile.php']);
         exit();
     }
-    redirect('../profile.html');
+    redirect('../profile/profile.php');
 }
 
 $errors = [];

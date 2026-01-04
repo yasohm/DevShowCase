@@ -162,6 +162,9 @@ function createDocument() {
     $description = sanitizeTextarea($_POST['description'] ?? '');
     $documentType = sanitizeInput($_POST['document_type'] ?? '');
     
+    // Debug logging
+    error_log("[DOC_UPLOAD] Title: $title | Type: $documentType | Files: " . print_r($_FILES, true));
+    
     // Validation
     if (empty($title)) {
         $errors[] = 'Document title is required.';
@@ -253,7 +256,8 @@ function createDocument() {
             jsonResponse(false, 'Failed to upload document. Please try again.');
         }
     } else {
-        jsonResponse(false, 'Validation failed', ['errors' => $errors]);
+        error_log("[DOC_UPLOAD] Validation Failed: " . implode(", ", $errors));
+        jsonResponse(false, 'Validation failed: ' . implode(", ", $errors), ['errors' => $errors]);
     }
 }
 
@@ -280,14 +284,9 @@ function updateDocument($documentId) {
     }
     
     // Sanitize and validate input
-    $title = sanitizeInput($_POST['title'] ?? '');
-    $description = sanitizeTextarea($_POST['description'] ?? '');
-    $documentType = sanitizeInput($_POST['document_type'] ?? '');
-    
-    // Validation
-    if (empty($title)) {
-        $errors[] = 'Document title is required.';
-    }
+    $title = sanitizeInput($_POST['title'] ?? $existingDocument['title']);
+    $description = sanitizeTextarea($_POST['description'] ?? $existingDocument['description']);
+    $documentType = sanitizeInput($_POST['document_type'] ?? $existingDocument['file_type']);
     
     // Update document if no errors
     if (empty($errors)) {
@@ -300,8 +299,8 @@ function updateDocument($documentId) {
             
             $success = $stmt->execute([
                 $title,
-                $description ?: null,
-                $documentType ?: null,
+                $description,
+                $documentType,
                 $documentId,
                 getCurrentUserId()
             ]);

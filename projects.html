@@ -80,27 +80,41 @@
                     <form id="addProjectForm">
                         <div class="mb-3">
                             <label for="projectTitle" class="form-label">Project Title</label>
-                            <input type="text" class="form-control" id="projectTitle" required>
+                            <input type="text" class="form-control" id="projectTitle" name="title" required>
                         </div>
                         <div class="mb-3">
                             <label for="projectDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="projectDescription" rows="4" required></textarea>
+                            <textarea class="form-control" id="projectDescription" name="description" rows="4"
+                                required></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="projectTechnologies" class="form-label">Technologies (comma-separated)</label>
-                            <input type="text" class="form-control" id="projectTechnologies"
+                            <input type="text" class="form-control" id="projectTechnologies" name="technologies"
                                 placeholder="e.g., React, Node.js, MongoDB">
                         </div>
                         <div class="mb-3">
                             <label for="projectGitHub" class="form-label">GitHub Repository URL</label>
-                            <input type="url" class="form-control" id="projectGitHub"
+                            <input type="url" class="form-control" id="projectGitHub" name="github_url"
                                 placeholder="https://github.com/username/repo">
                         </div>
                         <div class="mb-3">
-                            <label for="projectScreenshot" class="form-label">Screenshot URL</label>
-                            <input type="url" class="form-control" id="projectScreenshot"
-                                placeholder="https://example.com/screenshot.jpg">
-                            <small class="text-muted">Or upload a file (functionality to be implemented)</small>
+                            <label class="form-label">Screenshot</label>
+                            <div class="mb-2">
+                                <label for="projectScreenshot" class="form-label small">Enter URL</label>
+                                <input type="url" class="form-control" id="projectScreenshot" name="screenshot_url"
+                                    placeholder="https://example.com/screenshot.jpg">
+                                <small class="text-muted d-block mt-1">For GitHub images, use raw URL:
+                                    https://raw.githubusercontent.com/user/repo/branch/path/image.jpg</small>
+                            </div>
+                            <div class="text-center my-2">
+                                <span class="text-muted">— OR —</span>
+                            </div>
+                            <div>
+                                <label for="projectScreenshotFile" class="form-label small">Upload File</label>
+                                <input type="file" class="form-control" id="projectScreenshotFile" name="screenshot"
+                                    accept="image/*">
+                                <small class="text-muted">Max size: 5MB. Formats: JPG, PNG, GIF</small>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -124,24 +138,41 @@
                     <form id="editProjectForm">
                         <div class="mb-3">
                             <label for="editProjectTitle" class="form-label">Project Title</label>
-                            <input type="text" class="form-control" id="editProjectTitle" value="">
+                            <input type="text" class="form-control" id="editProjectTitle" name="title" value="">
                         </div>
                         <div class="mb-3">
                             <label for="editProjectDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="editProjectDescription" rows="4"></textarea>
+                            <textarea class="form-control" id="editProjectDescription" name="description"
+                                rows="4"></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="editProjectTechnologies" class="form-label">Technologies
                                 (comma-separated)</label>
-                            <input type="text" class="form-control" id="editProjectTechnologies" value="">
+                            <input type="text" class="form-control" id="editProjectTechnologies" name="technologies"
+                                value="">
                         </div>
                         <div class="mb-3">
                             <label for="editProjectGitHub" class="form-label">GitHub Repository URL</label>
-                            <input type="url" class="form-control" id="editProjectGitHub" value="">
+                            <input type="url" class="form-control" id="editProjectGitHub" name="github_url" value="">
                         </div>
                         <div class="mb-3">
-                            <label for="editProjectScreenshot" class="form-label">Screenshot URL</label>
-                            <input type="url" class="form-control" id="editProjectScreenshot" value="">
+                            <label class="form-label">Screenshot</label>
+                            <div class="mb-2">
+                                <label for="editProjectScreenshot" class="form-label small">Enter URL</label>
+                                <input type="url" class="form-control" id="editProjectScreenshot" name="screenshot_url"
+                                    value="">
+                                <small class="text-muted d-block mt-1">For GitHub images, use raw URL:
+                                    https://raw.githubusercontent.com/user/repo/branch/path/image.jpg</small>
+                            </div>
+                            <div class="text-center my-2">
+                                <span class="text-muted">— OR —</span>
+                            </div>
+                            <div>
+                                <label for="editProjectScreenshotFile" class="form-label small">Upload New File</label>
+                                <input type="file" class="form-control" id="editProjectScreenshotFile" name="screenshot"
+                                    accept="image/*">
+                                <small class="text-muted">Max size: 5MB. Leave empty to keep current screenshot</small>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -163,7 +194,7 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
-    <script src="js/script.js"></script>
+    <script src="js/script.js?v=1.2"></script>
 </body>
 
 </html>

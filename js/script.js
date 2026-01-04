@@ -514,16 +514,20 @@ function displayProfile(user, skills) {
     }
 
     // Name
-    const nameElements = document.querySelectorAll('h3.fw-bold.mb-1');
-    if (nameElements.length > 0) {
+    const nameElement = document.getElementById('profileName');
+    if (nameElement) {
         const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
-        nameElements[0].textContent = fullName;
+        nameElement.textContent = fullName;
     }
 
     // Job title
-    const jobTitleElements = document.querySelectorAll('.text-muted.mb-3');
-    if (jobTitleElements.length > 0 && user.job_title) {
-        jobTitleElements[0].textContent = user.job_title;
+    const jobTitleElement = document.getElementById('profileJobTitle');
+    if (jobTitleElement) {
+        if (user.job_title) {
+            jobTitleElement.textContent = user.job_title;
+        } else {
+            jobTitleElement.textContent = 'No job title added';
+        }
     }
 
     // GitHub link
@@ -557,14 +561,29 @@ function displayProfile(user, skills) {
         }
     }
 
+    // Contact Information
+    const contactEmail = document.getElementById('contactEmail');
+    if (contactEmail) {
+        contactEmail.textContent = user.email || 'Not provided';
+    }
+
+    const contactGithub = document.getElementById('contactGithub');
+    if (contactGithub) {
+        if (user.github_url) {
+            contactGithub.innerHTML = `<a href="${user.github_url}" target="_blank" class="text-decoration-none">${user.github_url}</a>`;
+        } else {
+            contactGithub.textContent = 'Not provided';
+        }
+    }
+
     // Populate edit modals
-    populateEditModals(user);
+    populateEditModals(user, skills);
 }
 
 /**
  * Populate edit modals with current data
  */
-function populateEditModals(user) {
+function populateEditModals(user, skills) {
     // Profile edit modal
     const editName = document.getElementById('editName');
     const editTitle = document.getElementById('editTitle');
@@ -576,6 +595,156 @@ function populateEditModals(user) {
     }
     if (editTitle) editTitle.value = user.job_title || '';
     if (editGitHub) editGitHub.value = user.github_url || '';
+
+    // Bio edit modal
+    const editBio = document.getElementById('editBio');
+    if (editBio) editBio.value = user.bio || '';
+
+    // Skills edit modal
+    const editSkills = document.getElementById('editSkills');
+    if (editSkills) {
+        if (skills && Array.isArray(skills)) {
+            editSkills.value = skills.join(', ');
+        } else {
+            editSkills.value = '';
+        }
+    }
+}
+
+/**
+ * Save profile changes (Name, Title, GitHub)
+ */
+async function saveProfileChanges() {
+    const editName = document.getElementById('editName').value.trim();
+    const editTitle = document.getElementById('editTitle').value.trim();
+    const editGitHub = document.getElementById('editGitHub').value.trim();
+
+    // Split name into first and last
+    const nameParts = editName.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
+    const formData = new FormData();
+    formData.append('action', 'update_profile');
+    formData.append('first_name', firstName);
+    formData.append('last_name', lastName);
+    formData.append('job_title', editTitle);
+    formData.append('github_url', editGitHub);
+
+    await sendProfileUpdate(formData, 'editProfileModal', 'Profile updated successfully!');
+}
+
+/**
+ * Save Bio
+ */
+async function saveBio() {
+    const editBio = document.getElementById('editBio').value.trim();
+
+    const formData = new FormData();
+    formData.append('action', 'update_profile');
+    formData.append('bio', editBio);
+
+    await sendProfileUpdate(formData, 'editBioModal', 'Bio updated successfully!');
+}
+
+/**
+ * Save Skills
+ */
+async function saveSkills() {
+    const editSkills = document.getElementById('editSkills').value.trim();
+
+    // Convert comma-separated string to array
+    const skillsArray = editSkills.split(',').map(skill => skill.trim()).filter(skill => skill !== '');
+
+    const formData = new FormData();
+    formData.append('action', 'update_skills');
+    formData.append('skills', JSON.stringify(skillsArray));
+
+    await sendProfileUpdate(formData, 'editSkillsModal', 'Skills updated successfully!');
+}
+
+/**
+ * Helper to send profile updates
+ */
+async function sendProfileUpdate(formData, modalId, successMessage) {
+    try {
+        const response = await fetch('profile/profile.php', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification(successMessage, 'success');
+            // Close modal
+            const modalElement = document.getElementById(modalId);
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            // Reload profile
+            loadProfile();
+        } else {
+            const errors = data.errors ? data.errors.join('<br>') : (data.error || 'Failed to update profile');
+            showNotification(errors, 'error');
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+}
+
+/**
+ * Upload profile photo
+ */
+async function uploadProfilePhoto() {
+    const fileInput = document.getElementById('profilePhotoInput');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        showNotification('Please select a file to upload.', 'warning');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'update_profile');
+    formData.append('profile_photo', fileInput.files[0]);
+
+    try {
+        const response = await fetch('profile/profile.php', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Profile photo updated successfully!', 'success');
+            // Close modal
+            const modalElement = document.getElementById('uploadPhotoModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            }
+            // Clear input
+            fileInput.value = '';
+            // Reload profile
+            loadProfile();
+        } else {
+            const errors = data.errors ? data.errors.join('<br>') : (data.error || 'Failed to update profile photo');
+            showNotification(errors, 'error');
+        }
+    } catch (error) {
+        console.error('Error uploading photo:', error);
+        showNotification('An error occurred while uploading. Please try again.', 'error');
+    }
 }
 
 /**
@@ -617,9 +786,14 @@ async function addProject() {
     const formData = new FormData(form);
     formData.append('action', 'add');
 
-    const submitBtn = form.querySelector('button[type="button"]');
-    const originalBtnText = submitBtn.innerHTML;
-    setButtonLoading(submitBtn, true);
+    const modal = document.getElementById('addProjectModal');
+    const submitBtn = modal ? modal.querySelector('.modal-footer .btn-primary') : null;
+    let originalBtnText = '';
+
+    if (submitBtn) {
+        originalBtnText = submitBtn.innerHTML;
+        setButtonLoading(submitBtn, true);
+    }
 
     try {
         const response = await fetch('projects/projects.php?action=add', {
@@ -653,6 +827,122 @@ async function addProject() {
         console.error('Error adding project:', error);
         const errorMsg = error.message || 'An error occurred. Please try again.';
         showNotification(errorMsg, 'error');
+    } finally {
+        if (submitBtn) {
+            setButtonLoading(submitBtn, false);
+            submitBtn.innerHTML = originalBtnText;
+        }
+    }
+}
+
+/**
+ * Edit project
+ */
+async function editProject(projectId) {
+    console.log('editProject called with ID:', projectId);
+    try {
+        const response = await fetch(`projects/projects.php?action=get&id=${projectId}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+        console.log('Edit project data received:', data);
+
+        if (data.success && data.data && data.data.project) {
+            const project = data.data.project;
+
+            // Populate modal
+            const form = document.getElementById('editProjectForm');
+            if (form) {
+                // Store project ID in a hidden field or data attribute
+                // Check if hidden input exists, if not create it
+                let idInput = form.querySelector('input[name="id"]');
+                if (!idInput) {
+                    idInput = document.createElement('input');
+                    idInput.type = 'hidden';
+                    idInput.name = 'id';
+                    form.appendChild(idInput);
+                }
+                idInput.value = project.id;
+
+                // Populate fields
+                if (form.elements['title']) form.elements['title'].value = project.title || '';
+                if (form.elements['description']) form.elements['description'].value = project.description || '';
+
+                // Technologies is array, join it
+                const tech = Array.isArray(project.technologies) ? project.technologies.join(', ') : project.technologies;
+                if (form.elements['technologies']) form.elements['technologies'].value = tech || '';
+
+                if (form.elements['github_url']) form.elements['github_url'].value = project.github_url || '';
+
+                // Screenshot URL
+                // If it's a full URL, use it. If relative, maybe prepend? 
+                // But inputs are usually for display or editing. 
+                // Currently backend saves provided URL directly.
+                if (form.elements['screenshot_url']) form.elements['screenshot_url'].value = project.screenshot_url || '';
+            }
+
+            // Update Save button onclick
+            const modalEl = document.getElementById('editProjectModal');
+            const saveBtn = modalEl.querySelector('.modal-footer .btn-primary');
+            saveBtn.onclick = () => saveProject(projectId);
+
+            // Show modal
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        } else {
+            showNotification('Failed to load project details', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading project:', error);
+        showNotification('Failed to load project details', 'error');
+    }
+}
+
+/**
+ * Save project changes
+ */
+async function saveProject(projectId) {
+    const form = document.getElementById('editProjectForm');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    formData.append('action', 'update');
+    // Ensure ID is sent
+    if (!formData.has('id')) {
+        formData.append('id', projectId);
+    }
+
+    const modalEl = document.getElementById('editProjectModal');
+    const submitBtn = modalEl.querySelector('.modal-footer .btn-primary');
+    const originalBtnText = submitBtn.innerHTML;
+    setButtonLoading(submitBtn, true);
+
+    try {
+        const response = await fetch('projects/projects.php?action=update', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Project updated successfully!', 'success');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            loadProjects(); // Reload projects
+        } else {
+            showNotification(data.errors ? data.errors.join('\n') : (data.message || 'Update failed'), 'error');
+        }
+    } catch (error) {
+        console.error('Error updating project:', error);
+        showNotification('An error occurred. Please try again.', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
         submitBtn.innerHTML = originalBtnText;
@@ -761,6 +1051,16 @@ function createDocumentCard(doc) {
     const extension = doc.file_extension || doc.file_type.toLowerCase();
     const iconClass = iconMap[extension] || 'bi-file-earmark text-secondary';
 
+    // Check if the file is an image
+    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(extension.toLowerCase());
+    const previewHtml = isImage && doc.file_url
+        ? `<div class="bg-light rounded overflow-hidden mb-3" style="height: 160px;">
+             <img src="${doc.file_url}" alt="${escapeHtml(doc.title)}" class="w-100 h-100 object-fit-cover">
+           </div>`
+        : `<div class="mb-3 text-center py-4">
+             <i class="bi ${iconClass}" style="font-size: 4rem;"></i>
+           </div>`;
+
     const typeBadge = doc.file_type
         ? `<span class="badge bg-${extension === 'pdf' ? 'danger' : extension.includes('doc') ? 'primary' : extension.includes('xls') ? 'success' : 'secondary'}-subtle text-${extension === 'pdf' ? 'danger' : extension.includes('doc') ? 'primary' : extension.includes('xls') ? 'success' : 'secondary'}">${doc.file_type.toUpperCase()}</span>`
         : '';
@@ -768,9 +1068,7 @@ function createDocumentCard(doc) {
     col.innerHTML = `
         <div class="card h-100 shadow-sm hover-shadow border-0">
             <div class="card-body d-flex flex-column">
-                <div class="mb-3 text-center">
-                    <i class="bi ${iconClass}" style="font-size: 4rem;"></i>
-                </div>
+                ${previewHtml}
                 <h5 class="card-title fw-bold">${escapeHtml(doc.title)}</h5>
                 <p class="text-muted mb-2">
                     ${typeBadge}
@@ -805,7 +1103,14 @@ async function uploadDocument() {
     const formData = new FormData(form);
     formData.append('action', 'upload');
 
-    const submitBtn = form.closest('.modal-content').querySelector('button[type="button"].btn-primary');
+    // Debug logging for FormData
+    console.log('--- Uploading Document ---');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? pair[1].name : pair[1]));
+    }
+
+    const modalElement = document.getElementById('uploadDocumentModal');
+    const submitBtn = modalElement.querySelector('button[onclick="uploadDocument()"]');
     const originalBtnText = submitBtn.innerHTML;
     setButtonLoading(submitBtn, true);
 
@@ -818,11 +1123,8 @@ async function uploadDocument() {
             }
         });
 
-        // Clone response to avoid "body already read" error
-        const responseClone = response.clone();
-
         if (!response.ok) {
-            const errorText = await responseClone.text();
+            const errorText = await response.text();
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
@@ -830,17 +1132,67 @@ async function uploadDocument() {
 
         if (data.success) {
             showNotification('Document uploaded successfully!', 'success');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('uploadDocumentModal'));
+            const modal = bootstrap.Modal.getInstance(modalElement);
             if (modal) modal.hide();
             form.reset();
             loadDocuments(); // Reload documents
         } else {
-            showNotification(data.errors ? data.errors.join('\n') : data.message, 'error');
+            console.error('Document Upload Validation Error:', data);
+            showNotification(data.message || 'Validation failed. Check console for details.', 'error');
         }
     } catch (error) {
         console.error('Error uploading document:', error);
         const errorMsg = error.message || 'An error occurred. Please try again.';
         showNotification(errorMsg, 'error');
+    } finally {
+        setButtonLoading(submitBtn, false);
+        submitBtn.innerHTML = originalBtnText;
+    }
+}
+
+/**
+ * Save document changes
+ */
+async function saveDocumentChanges() {
+    const form = document.getElementById('editDocumentForm');
+    if (!form) return;
+
+    const formData = new FormData(form);
+    formData.append('action', 'update');
+
+    const modalElement = document.getElementById('editDocumentModal');
+    const submitBtn = modalElement.querySelector('button[onclick="saveDocumentChanges()"]');
+    const originalBtnText = submitBtn.innerHTML;
+    setButtonLoading(submitBtn, true);
+
+    try {
+        const response = await fetch('documents/documents.php?action=update', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Document updated successfully!', 'success');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) modal.hide();
+            loadDocuments(); // Reload documents
+        } else {
+            console.error('Document Update Validation Error:', data);
+            showNotification(data.message || 'Validation failed. Check console for details.', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating document:', error);
+        showNotification('An error occurred. Please try again.', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
         submitBtn.innerHTML = originalBtnText;
@@ -965,7 +1317,35 @@ window.editProject = function (id) {
     // TODO: Implement edit project functionality
     console.log('Edit project:', id);
 };
-window.editDocument = function (id) {
-    // TODO: Implement edit document functionality
-    console.log('Edit document:', id);
+window.editDocument = async function (id) {
+    try {
+        const response = await fetch(`documents/documents.php?action=get&id=${id}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Failed to fetch document`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.data.document) {
+            const doc = data.data.document;
+            document.getElementById('editDocumentId').value = doc.id;
+            document.getElementById('editDocumentTitle').value = doc.title;
+            document.getElementById('editDocumentDescription').value = doc.description || '';
+            document.getElementById('editDocumentType').value = doc.file_type || '';
+            document.getElementById('editDocumentCurrentFile').textContent = doc.file_path.split('/').pop();
+
+            const modal = new bootstrap.Modal(document.getElementById('editDocumentModal'));
+            modal.show();
+        } else {
+            showNotification(data.message || 'Failed to load document details', 'error');
+        }
+    } catch (error) {
+        console.error('Error fetching document:', error);
+        showNotification('Failed to load document details', 'error');
+    }
 };

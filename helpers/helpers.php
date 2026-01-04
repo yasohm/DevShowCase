@@ -313,8 +313,14 @@ function jsonResponse($success, $message, $data = []) {
  * @return string Relative URL path
  */
 function getRelativeUrlPath($filePath) {
-    $basePath = __DIR__ . '/../';
-    return str_replace($basePath, '', $filePath);
+    $basePath = realpath(__DIR__ . '/../');
+    $normalizedFilePath = realpath($filePath) ?: $filePath;
+    
+    // Remove base path from file path
+    $relative = str_replace($basePath, '', $normalizedFilePath);
+    
+    // Ensure it starts with a clean relative path (no leading slash)
+    return ltrim($relative, DIRECTORY_SEPARATOR . '/');
 }
 
 /**
