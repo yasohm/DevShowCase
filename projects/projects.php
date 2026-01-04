@@ -7,8 +7,8 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../helpers/helpers.php';
 
-// Require user to be logged in
-requireLogin('../auth/login.php');
+// Remove global requireLogin to allow public project viewing
+// requireLogin('../auth/login.php');
 
 $pdo = getDBConnection();
 $errors = [];
@@ -19,12 +19,14 @@ $action = $_GET['action'] ?? $_POST['action'] ?? 'list';
 switch ($action) {
     case 'list':
         // Fetch all projects for current user
+        requireLogin('../auth/login.php');
         getProjects();
         break;
         
     case 'create':
     case 'add':
         // Create new project
+        requireLogin('../auth/login.php');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             createProject();
         } else {
@@ -37,7 +39,8 @@ switch ($action) {
         // Get single project
         $projectId = $_GET['id'] ?? $_POST['id'] ?? null;
         if ($projectId) {
-            getProject($projectId);
+            // Allow public reading of projects
+            getProject($projectId, true);
         } else {
             jsonResponse(false, 'Project ID required');
         }
@@ -46,6 +49,7 @@ switch ($action) {
     case 'update':
     case 'edit':
         // Update project
+        requireLogin('../auth/login.php');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $projectId = $_POST['id'] ?? null;
             if ($projectId) {
@@ -60,6 +64,7 @@ switch ($action) {
         
     case 'delete':
         // Delete project
+        requireLogin('../auth/login.php');
         $projectId = $_GET['id'] ?? $_POST['id'] ?? null;
         if ($projectId) {
             deleteProject($projectId);
@@ -117,17 +122,29 @@ function getProjects() {
 /**
  * Get single project by ID
  */
-function getProject($projectId) {
+function getProject($projectId, $allowPublic = false) {
     global $pdo;
     
     try {
-        $stmt = $pdo->prepare("
-            SELECT id, title, description, technologies, github_url, screenshot, 
-                   created_at, updated_at
-            FROM projects 
-            WHERE id = ? AND user_id = ?
-        ");
-        $stmt->execute([$projectId, getCurrentUserId()]);
+        if ($allowPublic) {
+            $stmt = $pdo->prepare("
+                SELECT p.id, p.user_id, p.title, p.description, p.technologies, p.github_url, p.screenshot, p.category, 
+                       p.created_at, p.updated_at, u.username, u.first_name, u.last_name
+                FROM projects p
+                JOIN users u ON p.user_id = u.id
+                WHERE p.id = ?
+            ");
+            $stmt->execute([$projectId]);
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT id, user_id, title, description, technologies, github_url, screenshot, category, 
+                       created_at, updated_at
+                FROM projects 
+                WHERE id = ? AND user_id = ?
+            ");
+            $stmt->execute([$projectId, getCurrentUserId()]);
+        }
+        
         $project = $stmt->fetch();
         
         if (!$project) {
@@ -135,10 +152,13 @@ function getProject($projectId) {
             return;
         }
         
+        // Check if current user is owner
+        $isOwner = ($project['user_id'] == getCurrentUserId());
+        
         // Parse technologies
         $project['technologies'] = parseTechnologies($project['technologies']);
         
-        // Handle screenshot URL - check if it's external URL or local path
+        // Handle screenshot URL
         if ($project['screenshot']) {
             if (filter_var($project['screenshot'], FILTER_VALIDATE_URL)) {
                 $project['screenshot_url'] = $project['screenshot'];
@@ -147,7 +167,10 @@ function getProject($projectId) {
             }
         }
         
-        jsonResponse(true, 'Project retrieved successfully', ['project' => $project]);
+        jsonResponse(true, 'Project retrieved successfully', [
+            'project' => $project,
+            'is_owner' => $isOwner
+        ]);
         
     } catch (PDOException $e) {
         error_log("Get Project Error: " . $e->getMessage());

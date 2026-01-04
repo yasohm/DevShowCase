@@ -7,15 +7,29 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../helpers/helpers.php';
 
-// Require user to be logged in
-requireLogin('../auth/login.php');
-
 $pdo = getDBConnection();
 $errors = [];
 $success = false;
 $userData = null;
 
-// Get current user data
+// Convert absolute file paths to relative URLs for web access
+$isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')
+    || (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+    || (!empty($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
+
+// Get user ID - prioritize 'id' from GET for public viewing
+$profileUserId = isset($_GET['id']) ? (int)$_GET['id'] : getCurrentUserId();
+
+// If no ID is provided and user is NOT logged in, require login
+if (!$profileUserId && !isset($_GET['id'])) {
+    if ($isAjax) {
+        jsonResponse(false, 'Login required');
+    } else {
+        requireLogin('../auth/login.php');
+    }
+}
+
+// Get user data
 try {
     $stmt = $pdo->prepare("
         SELECT id, username, email, first_name, last_name, bio, github_url, 
@@ -23,39 +37,48 @@ try {
         FROM users 
         WHERE id = ?
     ");
-    $stmt->execute([getCurrentUserId()]);
+    $stmt->execute([$profileUserId]);
     $userData = $stmt->fetch();
     
     if (!$userData) {
-        setErrorMessage('User not found.');
-        redirect('../auth/login.php');
+        if ($isAjax) {
+            jsonResponse(false, 'User not found.');
+        } else {
+            setErrorMessage('User not found.');
+            redirect('../auth/login.php');
+        }
     }
     
-    // User found, set success to true for GET requests
+    // Check if this is the current user viewing their own profile
+    $isOwner = ($profileUserId && $profileUserId == getCurrentUserId());
     $success = true;
 } catch (PDOException $e) {
     error_log("Profile Fetch Error: " . $e->getMessage());
     setErrorMessage('Failed to load profile data.');
 }
 
-// Handle form submission for profile update
+// Handle form submission for profile update (requires owner status)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if (!$isOwner) {
+        jsonResponse(false, 'Unauthorized. You can only edit your own profile.');
+    }
+
     $action = $_POST['action'];
     
     if ($action === 'update_profile') {
-        // Update basic profile information - use existing data if not provided in POST (partial update)
+        // Update basic profile information
         $firstName = isset($_POST['first_name']) ? sanitizeInput($_POST['first_name']) : $userData['first_name'];
         $lastName = isset($_POST['last_name']) ? sanitizeInput($_POST['last_name']) : $userData['last_name'];
         $bio = isset($_POST['bio']) ? sanitizeTextarea($_POST['bio']) : $userData['bio'];
         $githubUrl = isset($_POST['github_url']) ? sanitizeInput($_POST['github_url']) : $userData['github_url'];
         $jobTitle = isset($_POST['job_title']) ? sanitizeInput($_POST['job_title']) : $userData['job_title'];
         
-        // Validate GitHub URL if provided
+        // Validate GitHub URL
         if (!empty($githubUrl) && !validateURL($githubUrl)) {
             $errors[] = 'Invalid GitHub URL format.';
         }
         
-        // Update profile photo if uploaded
+        // Update profile photo
         $profilePhotoPath = $userData['profile_photo'];
         if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] === UPLOAD_ERR_OK) {
             $validation = validateFileUpload($_FILES['profile_photo'], ALLOWED_IMAGE_TYPES, MAX_PROFILE_IMAGE_SIZE);
@@ -64,20 +87,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $errors[] = $validation['error'];
             } else {
                 $uploadResult = uploadFile($_FILES['profile_photo'], UPLOAD_DIR_PROFILE, 'profile');
-                
-                if (!$uploadResult['success']) {
-                    $errors[] = $uploadResult['error'];
-                } else {
-                    // Delete old profile photo if exists
+                if ($uploadResult['success']) {
                     if ($profilePhotoPath && file_exists($profilePhotoPath)) {
                         deleteFile($profilePhotoPath);
                     }
                     $profilePhotoPath = $uploadResult['file_path'];
+                } else {
+                    $errors[] = $uploadResult['error'];
                 }
             }
         }
         
-        // Update database if no errors
         if (empty($errors)) {
             try {
                 $stmt = $pdo->prepare("
@@ -86,178 +106,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         profile_photo = ?, job_title = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
-                
-                $success = $stmt->execute([
-                    $firstName ?: null,
-                    $lastName ?: null,
-                    $bio ?: null,
-                    $githubUrl ?: null,
-                    $profilePhotoPath ?: null,
-                    $jobTitle ?: null,
-                    getCurrentUserId()
-                ]);
-                
+                $success = $stmt->execute([$firstName, $lastName, $bio, $githubUrl, $profilePhotoPath, $jobTitle, $profileUserId]);
                 if ($success) {
-                    // Update session data
-                    $_SESSION['first_name'] = $firstName;
-                    $_SESSION['last_name'] = $lastName;
-                    $_SESSION['bio'] = $bio;
-                    $_SESSION['github_url'] = $githubUrl;
-                    $_SESSION['profile_photo'] = $profilePhotoPath;
-                    $_SESSION['job_title'] = $jobTitle;
-                    
                     setSuccessMessage('Profile updated successfully!');
-                    
-                    // Refresh user data
-                    $stmt = $pdo->prepare("
-                        SELECT id, username, email, first_name, last_name, bio, github_url, 
-                               profile_photo, cv_path, job_title, skills, created_at
-                        FROM users 
-                        WHERE id = ?
-                    ");
-                    $stmt->execute([getCurrentUserId()]);
-                    $userData = $stmt->fetch();
+                    $userData['first_name'] = $firstName;
+                    $userData['last_name'] = $lastName;
+                    $userData['bio'] = $bio;
+                    $userData['github_url'] = $githubUrl;
+                    $userData['profile_photo'] = $profilePhotoPath;
+                    $userData['job_title'] = $jobTitle;
                 }
-                
             } catch (PDOException $e) {
                 error_log("Profile Update Error: " . $e->getMessage());
-                $errors[] = 'Failed to update profile. Please try again.';
+                $errors[] = 'Failed to update profile.';
             }
         }
-        
     } elseif ($action === 'update_skills') {
-        // Update skills
         $skills = $_POST['skills'] ?? '';
-        
-        // Validate skills (expect JSON array)
-        $skillsArray = [];
-        if (!empty($skills)) {
-            if (is_array($skills)) {
-                $skillsArray = $skills;
-            } elseif (is_string($skills)) {
-                // Try to decode JSON
-                $decoded = json_decode($skills, true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    $skillsArray = $decoded;
-                } else {
-                    // Comma-separated list
-                    $skillsArray = array_map('trim', explode(',', $skills));
-                }
-            }
-        }
-        
+        $skillsArray = is_array($skills) ? $skills : array_map('trim', explode(',', $skills));
         try {
             $stmt = $pdo->prepare("UPDATE users SET skills = ? WHERE id = ?");
-            $success = $stmt->execute([json_encode($skillsArray), getCurrentUserId()]);
-            
-            if ($success) {
-                $_SESSION['skills'] = json_encode($skillsArray);
+            if ($stmt->execute([json_encode($skillsArray), $profileUserId])) {
+                $userData['skills'] = json_encode($skillsArray);
                 setSuccessMessage('Skills updated successfully!');
-                
-                // Refresh user data
-                $stmt = $pdo->prepare("SELECT skills FROM users WHERE id = ?");
-                $stmt->execute([getCurrentUserId()]);
-                $userData['skills'] = $stmt->fetchColumn();
             }
-            
         } catch (PDOException $e) {
-            error_log("Skills Update Error: " . $e->getMessage());
-            $errors[] = 'Failed to update skills. Please try again.';
+            $errors[] = 'Failed to update skills.';
         }
     } elseif ($action === 'upload_cv') {
-        // Handle CV upload
         if (isset($_FILES['cv_file']) && $_FILES['cv_file']['error'] === UPLOAD_ERR_OK) {
-            $allowedCvTypes = [
-                'application/pdf',
-                'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            ];
-            
-            $validation = validateFileUpload($_FILES['cv_file'], $allowedCvTypes, MAX_FILE_SIZE);
-            
-            if (!$validation['valid']) {
-                $errors[] = $validation['error'];
-            } else {
+            $validation = validateFileUpload($_FILES['cv_file'], ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], MAX_FILE_SIZE);
+            if ($validation['valid']) {
                 $uploadResult = uploadFile($_FILES['cv_file'], UPLOAD_DIR_CV, 'cv');
-                
-                if (!$uploadResult['success']) {
-                    $errors[] = $uploadResult['error'];
-                } else {
-                    $newCvPath = $uploadResult['file_path'];
-                    $oldCvPath = $userData['cv_path'];
-                    
-                    try {
-                        $stmt = $pdo->prepare("UPDATE users SET cv_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                        $success = $stmt->execute([$newCvPath, getCurrentUserId()]);
-                        
-                        if ($success) {
-                            // Delete old CV if exists
-                            if ($oldCvPath && file_exists($oldCvPath)) {
-                                deleteFile($oldCvPath);
-                            }
-                            $userData['cv_path'] = $newCvPath;
-                            setSuccessMessage('CV uploaded successfully!');
-                        }
-                    } catch (PDOException $e) {
-                        error_log("CV Upload DB Error: " . $e->getMessage());
-                        $errors[] = 'Failed to update database. Please try again.';
-                        // Clean up uploaded file since DB update failed
-                        deleteFile($newCvPath);
+                if ($uploadResult['success']) {
+                    $oldCv = $userData['cv_path'];
+                    $stmt = $pdo->prepare("UPDATE users SET cv_path = ? WHERE id = ?");
+                    if ($stmt->execute([$uploadResult['file_path'], $profileUserId])) {
+                        if ($oldCv && file_exists($oldCv)) deleteFile($oldCv);
+                        $userData['cv_path'] = $uploadResult['file_path'];
+                        setSuccessMessage('CV uploaded successfully!');
                     }
+                } else {
+                    $errors[] = $uploadResult['error'];
                 }
+            } else {
+                $errors[] = $validation['error'];
             }
-        } else {
-            $errors[] = 'Please select a file to upload.';
         }
     }
 }
 
-// Parse skills if exists
+// Format data for response
 $skillsArray = [];
 if (!empty($userData['skills'])) {
     $decoded = json_decode($userData['skills'], true);
-    if (is_array($decoded)) {
-        $skillsArray = $decoded;
-    }
+    if (is_array($decoded)) $skillsArray = $decoded;
 }
 
-// [Removed duplicate AJAX handler]
-
-// Convert absolute file paths to relative URLs for web access
 if (!empty($userData['profile_photo'])) {
     $userData['profile_photo'] = getRelativeUrlPath($userData['profile_photo']);
 }
-
 if (!empty($userData['cv_path'])) {
     $userData['cv_path'] = getRelativeUrlPath($userData['cv_path']);
 }
 
-// Check for AJAX request (fetch/XMLHttpRequest)
-// fetch() doesn't always send X-Requested-With, so check multiple indicators
-$isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')
-    || (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
-    || (!empty($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
-
-// Also check if request method is GET and no referer is set (likely AJAX)
-if (!$isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && empty($_SERVER['HTTP_REFERER'])) {
-    // If no referer and GET request, assume it's a direct access, redirect
-    header('Location: ../profile.html');
-    exit();
-}
-
-// Return JSON for AJAX requests or if it's a GET request with referer (likely from page)
-if ($isAjax || ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SERVER['HTTP_REFERER']))) {
+// Return JSON response
+if ($isAjax || (!empty($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'view.html') !== false)) {
     header('Content-Type: application/json');
     echo json_encode([
         'success' => $success,
         'errors' => $errors,
         'user' => $userData,
-        'skills' => $skillsArray
+        'skills' => $skillsArray,
+        'is_owner' => $isOwner
     ]);
     exit();
 }
 
-// Default: redirect to HTML page
+// If not AJAX, redirect back to profile page
 header('Location: ../profile.html');
 exit();
-

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
@@ -44,47 +46,76 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero-section bg-gradient-primary text-white py-5 mt-5">
-        <div class="container py-5">
-            <div class="row align-items-center">
-                <div class="col-lg-4 text-center mb-4 mb-lg-0">
-                    <img src="https://via.placeholder.com/300x300/4a90e2/ffffff?text=Profile" 
-                         alt="Profile Picture" 
-                         class="rounded-circle img-fluid profile-img shadow-lg mb-3">
-                    <h2 class="fw-bold">Loading...</h2>
-                    <p class="lead">Loading...</p>
-                    <a href="#" target="_blank" class="btn btn-light btn-sm" style="display:none;">
-                        <i class="bi bi-github me-2"></i>GitHub Profile
-                    </a>
+    <section class="hero-section bg-primary text-white py-5 mt-5">
+        <div class="container py-5 text-center">
+            <h1 class="display-3 fw-bold mb-3">Welcome to Community Showcase</h1>
+            <p class="lead mb-4 fs-4">Discover the amazing projects and digital documents created by our talented
+                students.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="register.html" class="btn btn-light btn-lg px-4 fw-bold">Join the Community</a>
+                <a href="#members" class="btn btn-outline-light btn-lg px-4">Meet Members</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Members Section -->
+    <section id="members" class="py-5">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h2 class="fw-bold mb-0">Community Members</h2>
+                    <p class="text-muted mb-0">Meet the talented developers in our network</p>
                 </div>
-                <div class="col-lg-8">
-                    <h1 class="display-4 fw-bold mb-4">Welcome to My Portfolio</h1>
-                    <p class="lead mb-4">Loading profile...</p>
-                    <!-- Skills Badges -->
-                    <div class="mb-4 skills-container">
-                        <!-- Skills will be loaded dynamically -->
+            </div>
+            <div id="membersContainer" class="row g-4">
+                <!-- Members will be loaded dynamically -->
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Projects Section -->
+    <!-- Community Projects Section -->
     <section class="py-5 bg-light">
         <div class="container">
-            <h2 class="text-center mb-5 fw-bold section-title">Featured Projects</h2>
-            <div class="row g-4">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h2 class="fw-bold mb-0">Recent Projects</h2>
+                    <p class="text-muted mb-0">Explore the latest technical contributions</p>
+                </div>
+                <a href="projects.html" class="btn btn-primary btn-sm">View All Projects</a>
+            </div>
+            <div id="showcaseProjectsContainer" class="row g-4">
                 <!-- Projects will be loaded dynamically -->
-                <div class="col-12 text-center">
+                <div class="col-12 text-center py-5">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                 </div>
             </div>
-            <div class="text-center mt-4">
-                <a href="projects.html" class="btn btn-primary btn-lg">
-                    <i class="bi bi-arrow-right me-2"></i>View All Projects
-                </a>
+        </div>
+    </section>
+
+    <!-- Community Documents Section -->
+    <section class="py-5">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <div>
+                    <h2 class="fw-bold mb-0">Shared Documents</h2>
+                    <p class="text-muted mb-0">Access useful resources and documentation</p>
+                </div>
+                <a href="documents.html" class="btn btn-primary btn-sm">View All Documents</a>
+            </div>
+            <div id="showcaseDocumentsContainer" class="row g-4">
+                <!-- Documents will be loaded dynamically -->
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -101,5 +132,5 @@
     <!-- Custom JS -->
     <script src="js/script.js"></script>
 </body>
-</html>
 
+</html>

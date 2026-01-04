@@ -12,15 +12,19 @@ document.addEventListener('DOMContentLoaded', function () {
  * Initialize the application
  */
 function initializeApp() {
+    console.log('Initializing App...');
     setupPasswordToggles();
     setupFormValidation();
     setupNavbarActiveState();
     checkAuth();
 
     // Load page-specific data
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const path = window.location.pathname;
+    const currentPage = path.split('/').pop() || 'index.html';
+    console.log('Current Page Detected:', currentPage, 'Path:', path);
 
-    if (currentPage === 'index.html' || currentPage === '' || currentPage.includes('index')) {
+    if (currentPage === 'index.html' || currentPage === '' || currentPage === 'DevShowcase' || currentPage.includes('index')) {
+        console.log('Loading Showcase...');
         loadPublicShowcase();
     } else if (currentPage.includes('profile')) {
         loadProfile();
@@ -28,6 +32,8 @@ function initializeApp() {
         loadProjects();
     } else if (currentPage.includes('documents')) {
         loadDocuments();
+    } else if (currentPage.includes('view.html')) {
+        // loadViewer is called via inline script in view.html, but we can call it here too if needed
     }
 }
 
@@ -273,57 +279,148 @@ function setupNavbarActiveState() {
  */
 async function loadPublicShowcase() {
     try {
-        // Check if user is logged in to show their profile
-        const authCheck = await fetch('auth/check.php', {
+        const response = await fetch('showcase/showcase.php', {
             headers: {
+                'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
-        const authData = await authCheck.json();
 
-        if (authData.logged_in) {
-            // Load logged-in user's profile for showcase
-            const profileResponse = await fetch('profile/profile.php', {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: Failed to load showcase`);
+        }
 
-            if (!profileResponse.ok) {
-                throw new Error(`HTTP ${profileResponse.status}: Failed to load profile`);
-            }
+        const data = await response.json();
 
-            const profileData = await profileResponse.json();
-
-            if (profileData.success && profileData.user) {
-                displayShowcase(profileData.user, profileData.skills || []);
-
-                // Load projects
-                const projectsResponse = await fetch('projects/projects.php?action=list', {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (!projectsResponse.ok) {
-                    throw new Error(`HTTP ${projectsResponse.status}: Failed to load projects`);
-                }
-
-                const projectsData = await projectsResponse.json();
-                if (projectsData.success) {
-                    displayProjects(projectsData.data.projects || [], 3); // Show max 3 on homepage
-                }
-            }
-        } else {
-            // Show placeholder or message to login
-            showLoginPrompt();
+        if (data.success) {
+            displayMembers(data.members || []);
+            displayShowcaseProjects(data.projects || []);
+            displayShowcaseDocuments(data.documents || []);
         }
     } catch (error) {
-        console.error('Error loading showcase:', error);
+        console.error('Error loading community showcase:', error);
     }
+}
+
+/**
+ * Display community members
+ */
+function displayMembers(members) {
+    console.log('Rendering members:', members ? members.length : 0);
+    const container = document.getElementById('membersContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (members.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted">No members joined yet</div>';
+        return;
+    }
+
+    members.forEach(member => {
+        const col = document.createElement('div');
+        col.className = 'col-6 col-md-4 col-lg-2 text-center mb-4';
+
+        const photo = member.profile_photo || 'https://via.placeholder.com/150x150/4a90e2/ffffff?text=' + member.username.substring(0, 1).toUpperCase();
+
+        col.innerHTML = `
+            <div class="p-3">
+                <a href="view.html?type=member&id=${member.id}" class="text-decoration-none">
+                    <img src="${photo}" class="rounded-circle img-fluid shadow-sm mb-2 border border-2 border-primary-subtle hover-shadow transition" style="width: 80px; height: 80px; object-fit: cover;">
+                    <h6 class="fw-bold mb-0 text-truncate text-dark">${escapeHtml(member.full_name)}</h6>
+                    <small class="text-muted text-truncate d-block">${escapeHtml(member.job_title || 'Student')}</small>
+                </a>
+            </div>
+        `;
+        container.appendChild(col);
+    });
+}
+
+/**
+ * Display projects on the showcase page
+ */
+function displayShowcaseProjects(projects) {
+    console.log('Rendering projects:', projects ? projects.length : 0);
+    const container = document.getElementById('showcaseProjectsContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (projects.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted">No projects shared yet</div>';
+        return;
+    }
+
+    projects.forEach(project => {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4';
+
+        const screenshot = project.screenshot_url || 'https://via.placeholder.com/600x400/f8f9fa/6c757d?text=No+Screenshot';
+
+        col.innerHTML = `
+            <div class="card h-100 shadow-sm border-0 hover-shadow transition">
+                <div class="position-relative">
+                    <img src="${screenshot}" class="card-img-top" alt="${escapeHtml(project.title)}" style="height: 200px; object-fit: cover;">
+                    <span class="badge bg-primary position-absolute top-0 end-0 m-3 shadow-sm">${escapeHtml(project.category || 'Project')}</span>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title fw-bold mb-1">${escapeHtml(project.title)}</h5>
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-person-circle text-muted me-2"></i>
+                        <small class="text-muted fw-medium">By ${escapeHtml(project.author_name)}</small>
+                    </div>
+                    <p class="card-text text-muted small mb-4 line-clamp-3">${escapeHtml(project.description || 'No description provided')}</p>
+                    <div class="d-flex gap-2">
+                        ${project.project_url ? `<a href="${project.project_url}" target="_blank" class="btn btn-sm btn-outline-primary flex-fill">Live Demo</a>` : ''}
+                        <a href="view.html?type=project&id=${project.id}" class="btn btn-sm btn-primary flex-fill">View Details</a>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(col);
+    });
+}
+
+/**
+ * Display documents on the showcase page
+ */
+function displayShowcaseDocuments(documents) {
+    console.log('Rendering documents:', documents ? documents.length : 0);
+    const container = document.getElementById('showcaseDocumentsContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (documents.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted">No documents shared yet</div>';
+        return;
+    }
+
+    documents.forEach(doc => {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4';
+
+        const extension = doc.file_extension || 'file';
+        const iconClass = extension === 'pdf' ? 'bi-file-earmark-pdf text-danger' : 'bi-file-earmark-text text-primary';
+
+        col.innerHTML = `
+            <div class="card h-100 shadow-sm border-0 hover-shadow transition">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 bg-light rounded p-3 me-3">
+                        <i class="bi ${iconClass} fs-2"></i>
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <h6 class="fw-bold mb-0 text-truncate">${escapeHtml(doc.title)}</h6>
+                        <small class="text-muted d-block">By ${escapeHtml(doc.author_name)}</small>
+                    </div>
+                    <a href="documents/documents.php?action=download&id=${doc.id}" class="btn btn-link text-primary p-0 ms-2">
+                        <i class="bi bi-download fs-5"></i>
+                    </a>
+                </div>
+            </div>
+        `;
+        container.appendChild(col);
+    });
 }
 
 /**
@@ -1481,3 +1578,190 @@ window.editDocument = async function (id) {
         showNotification('Failed to load document details', 'error');
     }
 };
+
+window.loadViewer = loadViewer;
+
+/**
+ * Load Viewer Data (for view.html)
+ */
+async function loadViewer() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const type = urlParams.get('type');
+    const id = urlParams.get('id');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    if (!type || !id) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    try {
+        let apiUrl = '';
+        if (type === 'member') {
+            apiUrl = `profile/profile.php?id=${id}`;
+        } else if (type === 'project') {
+            apiUrl = `projects/projects.php?action=read&id=${id}`;
+        }
+
+        const response = await fetch(apiUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) throw new Error('Data not found');
+        const data = await response.json();
+
+        if (data.success) {
+            if (type === 'member') {
+                displayMemberView(data.user, data.skills || []);
+            } else if (type === 'project') {
+                displayProjectView(data.project);
+            }
+        } else {
+            document.getElementById('viewContent').innerHTML = `
+                <div class="container py-5 mt-5 text-center">
+                    <i class="bi bi-exclamation-triangle display-1 text-warning mb-4"></i>
+                    <h2>Oops! ${data.message || 'Item not found'}</h2>
+                    <a href="index.html" class="btn btn-primary mt-3">Back to Showcase</a>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Viewer error:', error);
+    } finally {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+    }
+}
+
+/**
+ * Display Member Profile in Viewer
+ */
+function displayMemberView(user, skills) {
+    const container = document.getElementById('viewContent');
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+    const photo = user.profile_photo || 'https://via.placeholder.com/300x300/4a90e2/ffffff?text=' + user.username.substring(0, 1).toUpperCase();
+
+    // Set page title
+    document.title = `${fullName} - DevShowcase`;
+
+    container.innerHTML = `
+        <div class="view-header">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center mb-4 mb-md-0">
+                        <img src="${photo}" class="rounded-circle img-fluid shadow-lg border border-4 border-white-50" style="width: 200px; height: 200px; object-fit: cover;">
+                    </div>
+                    <div class="col-md-9">
+                        <h1 class="display-4 fw-bold mb-1">${escapeHtml(fullName)}</h1>
+                        <p class="fs-4 opacity-75 mb-3">${escapeHtml(user.job_title || 'Software Developer')}</p>
+                        <div class="d-flex gap-3 flex-wrap">
+                            ${user.email ? `<span class="badge bg-white text-primary px-3 py-2"><i class="bi bi-envelope me-2"></i>${escapeHtml(user.email)}</span>` : ''}
+                            ${user.github_url ? `<a href="${user.github_url}" target="_blank" class="btn btn-sm btn-light px-3"><i class="bi bi-github me-2"></i>GitHub</a>` : ''}
+                            ${user.cv_path ? `<a href="${user.cv_path}" download class="btn btn-sm btn-success px-3"><i class="bi bi-file-earmark-person me-2"></i>Download CV</a>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container py-5">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h3 class="fw-bold mb-4">About Me</h3>
+                            <p class="lead text-muted">${user.bio ? escapeHtml(user.bio).replace(/\n/g, '<br>') : 'No bio provided.'}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <h3 class="fw-bold mb-4">Skills</h3>
+                            <div class="d-flex flex-wrap gap-2" id="memberSkills">
+                                <!-- Loaded by renderSkillsInto -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Render skills
+    const skillsContainer = document.getElementById('memberSkills');
+    if (skillsContainer && skills.length > 0) {
+        skills.forEach(skill => {
+            const logo = getSkillLogo(skill);
+            const badge = document.createElement('div');
+            badge.className = 'skill-badge badge border py-2 px-3 text-dark d-flex align-items-center bg-white shadow-sm';
+            badge.innerHTML = `
+                ${logo ? `<img src="${logo}" alt="${skill}" class="skill-logo me-2">` : '<i class="bi bi-code-slash me-2 text-primary"></i>'}
+                <span>${escapeHtml(skill)}</span>
+            `;
+            skillsContainer.appendChild(badge);
+        });
+    } else if (skillsContainer) {
+        skillsContainer.innerHTML = '<p class="text-muted">No skills listed</p>';
+    }
+}
+
+/**
+ * Display Project Detail in Viewer
+ */
+function displayProjectView(project) {
+    const container = document.getElementById('viewContent');
+    const screenshot = project.screenshot_url || 'https://via.placeholder.com/1200x600/f8f9fa/6c757d?text=No+Screenshot';
+
+    // Set page title
+    document.title = `${project.title} - DevShowcase`;
+
+    container.innerHTML = `
+        <div class="view-header">
+            <div class="container text-center">
+                <span class="badge bg-white text-primary mb-3 px-3 py-2 fw-bold text-uppercase">${escapeHtml(project.category || 'Project')}</span>
+                <h1 class="display-3 fw-bold mb-3">${escapeHtml(project.title)}</h1>
+                <div class="d-flex justify-content-center align-items-center">
+                    <div class="d-flex align-items-center bg-dark bg-opacity-25 rounded-pill px-3 py-2">
+                        <i class="bi bi-person-circle me-2"></i>
+                        <span>By ${escapeHtml(project.first_name || project.username)} ${escapeHtml(project.last_name || '')}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-8">
+                    <img src="${screenshot}" class="img-fluid rounded-4 shadow-lg mb-5" alt="${escapeHtml(project.title)}">
+                    
+                    <h3 class="fw-bold mb-4">Description</h3>
+                    <div class="project-description lead text-muted mb-5">
+                        ${escapeHtml(project.description || 'No description provided.').replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card border-0 shadow-sm mb-4 position-sticky" style="top: 100px;">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-4 text-primary">Technologies</h5>
+                            <div class="d-flex flex-wrap gap-2 mb-5">
+                                ${project.technologies.map(tech => `
+                                    <span class="badge bg-primary-subtle border border-primary-subtle text-primary px-3 py-2">${escapeHtml(tech)}</span>
+                                `).join('')}
+                            </div>
+                            
+                            <hr class="my-4 opacity-10">
+
+                            <div class="d-grid gap-3">
+                                ${project.project_url ? `<a href="${project.project_url}" target="_blank" class="btn btn-primary btn-lg"><i class="bi bi-rocket-takeoff me-2"></i>Visit Live Project</a>` : ''}
+                                ${project.github_url ? `<a href="${project.github_url}" target="_blank" class="btn btn-outline-dark btn-lg"><i class="bi bi-github me-2"></i>View on GitHub</a>` : ''}
+                                <a href="view.html?type=member&id=${project.user_id}" class="btn btn-light mt-2 border">
+                                    <i class="bi bi-person-lines-fill me-2"></i>View Author Profile
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}

@@ -336,3 +336,26 @@ footer {
 .skill-logo {
     filter: drop-shadow(0 1px 1px rgba(0,0,0,0.05));
 }
+
+/* Transitions and Hover Effects */
+.transition {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+}
+
+/* Custom Profile Image Styles for Showcase */
+.border-primary-subtle {
+    border-color: rgba(13, 110, 253, 0.2) !important;
+}
+
