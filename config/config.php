@@ -112,6 +112,15 @@ createUploadDirectories();
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
+    // Set cookie parameters for better browser compatibility
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '', // Default to current domain
+        'secure' => false, // Allow HTTP for localhost
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     session_start();
 }
 

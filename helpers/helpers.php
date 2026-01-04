@@ -62,12 +62,30 @@ function isLoggedIn() {
 }
 
 /**
- * Require user to be logged in (redirect if not)
+ * Check if the request is an AJAX request
+ * 
+ * @return bool True if AJAX request, false otherwise
+ */
+function isAjaxRequest() {
+    return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest')
+        || (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+        || (!empty($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
+}
+
+/**
+ * Require user to be logged in (redirect or return JSON error if not)
  * 
  * @param string $redirectUrl URL to redirect to if not logged in
  */
 function requireLogin($redirectUrl = '../auth/login.php') {
     if (!isLoggedIn()) {
+        if (isAjaxRequest()) {
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'error' => 'Unauthorized. Please login.']);
+            exit();
+        }
+        
         $_SESSION['error_message'] = 'Please login to access this page.';
         header('Location: ' . $redirectUrl);
         exit();

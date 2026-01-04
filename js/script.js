@@ -36,7 +36,11 @@ function initializeApp() {
  */
 async function checkAuth() {
     try {
-        const response = await fetch('auth/check.php');
+        const response = await fetch('auth/check.php', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
 
         if (!response.ok) {
             return false;
@@ -270,7 +274,11 @@ function setupNavbarActiveState() {
 async function loadPublicShowcase() {
     try {
         // Check if user is logged in to show their profile
-        const authCheck = await fetch('auth/check.php');
+        const authCheck = await fetch('auth/check.php', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
         const authData = await authCheck.json();
 
         if (authData.logged_in) {
@@ -616,7 +624,10 @@ async function addProject() {
     try {
         const response = await fetch('projects/projects.php?action=add', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
         // Clone response to avoid "body already read" error
@@ -657,7 +668,11 @@ async function deleteProjectById(projectId) {
     }
 
     try {
-        const response = await fetch(`projects/projects.php?action=delete&id=${projectId}`);
+        const response = await fetch(`projects/projects.php?action=delete&id=${projectId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
         const data = await response.json();
 
         if (data.success) {
@@ -797,7 +812,10 @@ async function uploadDocument() {
     try {
         const response = await fetch('documents/documents.php?action=upload', {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
         // Clone response to avoid "body already read" error
@@ -838,7 +856,11 @@ async function deleteDocumentById(documentId) {
     }
 
     try {
-        const response = await fetch(`documents/documents.php?action=delete&id=${documentId}`);
+        const response = await fetch(`documents/documents.php?action=delete&id=${documentId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
         const data = await response.json();
 
         if (data.success) {

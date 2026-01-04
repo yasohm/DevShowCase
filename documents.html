@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
@@ -109,7 +111,8 @@
                         <div class="mb-3">
                             <label for="documentFile" class="form-label">Select File</label>
                             <input type="file" class="form-control" id="documentFile" required>
-                            <small class="text-muted">Max file size: 10MB (upload functionality to be implemented)</small>
+                            <small class="text-muted">Max file size: 10MB (upload functionality to be
+                                implemented)</small>
                         </div>
                     </form>
                 </div>
@@ -133,18 +136,16 @@
                     <form id="editDocumentForm">
                         <div class="mb-3">
                             <label for="editDocumentTitle" class="form-label">Document Title</label>
-                            <input type="text" class="form-control" id="editDocumentTitle" value="Resume - 2024">
+                            <input type="text" class="form-control" id="editDocumentTitle" value="">
                         </div>
                         <div class="mb-3">
                             <label for="editDocumentDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="editDocumentDescription" rows="3">
-Updated resume with latest work experience and skills.
-                            </textarea>
+                            <textarea class="form-control" id="editDocumentDescription" rows="3"></textarea>
                         </div>
                         <div class="mb-3">
                             <label for="editDocumentType" class="form-label">Document Type</label>
                             <select class="form-select" id="editDocumentType">
-                                <option value="PDF" selected>PDF</option>
+                                <option value="PDF">PDF</option>
                                 <option value="DOCX">Word Document</option>
                                 <option value="XLSX">Excel Spreadsheet</option>
                                 <option value="PNG">Image (PNG)</option>
@@ -154,7 +155,7 @@ Updated resume with latest work experience and skills.
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Current File</label>
-                            <p class="text-muted mb-0">resume-2024.pdf (2.5 MB)</p>
+                            <p class="text-muted mb-0" id="editDocumentCurrentFile"></p>
                             <small class="text-muted">To change the file, delete and re-upload</small>
                         </div>
                     </form>
@@ -179,5 +180,5 @@ Updated resume with latest work experience and skills.
     <!-- Custom JS -->
     <script src="js/script.js"></script>
 </body>
-</html>
 
+</html>

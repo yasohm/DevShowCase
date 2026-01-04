@@ -176,16 +176,7 @@ if (!empty($userData['skills'])) {
     }
 }
 
-// Return JSON response if AJAX request
-if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => $success,
-        'errors' => $errors,
-        'user_data' => $userData
-    ]);
-    exit();
-}
+// [Removed duplicate AJAX handler]
 
 // Convert absolute file paths to relative URLs for web access
 if (!empty($userData['profile_photo'])) {
@@ -225,7 +216,8 @@ if (!$isAjax && $_SERVER['REQUEST_METHOD'] === 'GET' && empty($_SERVER['HTTP_REF
 if ($isAjax || ($_SERVER['REQUEST_METHOD'] === 'GET' && !empty($_SERVER['HTTP_REFERER']))) {
     header('Content-Type: application/json');
     echo json_encode([
-        'success' => true,
+        'success' => $success,
+        'errors' => $errors,
         'user' => $userData,
         'skills' => $skillsArray
     ]);

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
@@ -53,34 +55,29 @@
                         <div class="card-body text-center p-4">
                             <!-- Profile Picture -->
                             <div class="position-relative d-inline-block mb-3">
-                                <img src="https://via.placeholder.com/200x200/4a90e2/ffffff?text=Profile" 
-                                     alt="Profile Picture" 
-                                     class="rounded-circle img-fluid profile-img-large">
-                                <button class="btn btn-sm btn-primary rounded-circle position-absolute" 
-                                        style="bottom: 0; right: 0; width: 40px; height: 40px;"
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#uploadPhotoModal"
-                                        title="Change Profile Picture">
+                                <img src="https://via.placeholder.com/200x200/4a90e2/ffffff?text=Profile"
+                                    alt="Profile Picture" class="rounded-circle img-fluid profile-img-large">
+                                <button class="btn btn-sm btn-primary rounded-circle position-absolute"
+                                    style="bottom: 0; right: 0; width: 40px; height: 40px;" data-bs-toggle="modal"
+                                    data-bs-target="#uploadPhotoModal" title="Change Profile Picture">
                                     <i class="bi bi-camera"></i>
                                 </button>
                             </div>
-                            
+
                             <h3 class="fw-bold mb-1">Loading...</h3>
                             <p class="text-muted mb-3">Loading...</p>
-                            
+
                             <!-- GitHub Link -->
                             <div class="mb-3">
-                                <a href="#" 
-                                   target="_blank" 
-                                   class="btn btn-outline-dark btn-sm w-100" style="display:none;">
+                                <a href="#" target="_blank" class="btn btn-outline-dark btn-sm w-100"
+                                    style="display:none;">
                                     <i class="bi bi-github me-2"></i>GitHub Profile
                                 </a>
                             </div>
 
                             <!-- Edit Profile Button -->
-                            <button class="btn btn-primary w-100" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#editProfileModal">
+                            <button class="btn btn-primary w-100" data-bs-toggle="modal"
+                                data-bs-target="#editProfileModal">
                                 <i class="bi bi-pencil me-2"></i>Edit Profile
                             </button>
                         </div>
@@ -98,9 +95,8 @@
                         </div>
                         <div class="card-body">
                             <p class="mb-0">Loading bio...</p>
-                            <button class="btn btn-sm btn-outline-primary mt-3" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#editBioModal">
+                            <button class="btn btn-sm btn-outline-primary mt-3" data-bs-toggle="modal"
+                                data-bs-target="#editBioModal">
                                 <i class="bi bi-pencil me-1"></i>Edit Bio
                             </button>
                         </div>
@@ -108,13 +104,13 @@
 
                     <!-- Skills Section -->
                     <div class="card shadow-sm border-0 mb-4">
-                        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <div
+                            class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0 fw-bold">
                                 <i class="bi bi-tools me-2 text-primary"></i>Skills
                             </h5>
-                            <button class="btn btn-sm btn-outline-primary" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#editSkillsModal">
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                data-bs-target="#editSkillsModal">
                                 <i class="bi bi-plus-circle me-1"></i>Add Skills
                             </button>
                         </div>
@@ -137,20 +133,17 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <strong>Email:</strong>
-                                    <p class="text-muted mb-0">john.doe@example.com</p>
+                                    <p class="text-muted mb-0" id="contactEmail">Loading...</p>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <strong>GitHub:</strong>
-                                    <p class="text-muted mb-0">
-                                        <a href="https://github.com/johndoe" target="_blank" class="text-decoration-none">
-                                            github.com/johndoe
-                                        </a>
+                                    <p class="text-muted mb-0" id="contactGithub">
+                                        Loading...
                                     </p>
                                 </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-primary" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#editContactModal">
+                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                data-bs-target="#editContactModal">
                                 <i class="bi bi-pencil me-1"></i>Edit Contact
                             </button>
                         </div>
@@ -172,15 +165,15 @@
                     <form id="editProfileForm">
                         <div class="mb-3">
                             <label for="editName" class="form-label">Full Name</label>
-                            <input type="text" class="form-control" id="editName" value="John Doe">
+                            <input type="text" class="form-control" id="editName" value="">
                         </div>
                         <div class="mb-3">
                             <label for="editTitle" class="form-label">Job Title</label>
-                            <input type="text" class="form-control" id="editTitle" value="Full Stack Developer">
+                            <input type="text" class="form-control" id="editTitle" value="">
                         </div>
                         <div class="mb-3">
                             <label for="editGitHub" class="form-label">GitHub URL</label>
-                            <input type="url" class="form-control" id="editGitHub" value="https://github.com/johndoe">
+                            <input type="url" class="form-control" id="editGitHub" value="">
                         </div>
                     </form>
                 </div>
@@ -204,5 +197,5 @@
     <!-- Custom JS -->
     <script src="js/script.js"></script>
 </body>
-</html>
 
+</html>
