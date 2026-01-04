@@ -19,7 +19,7 @@ $userData = null;
 try {
     $stmt = $pdo->prepare("
         SELECT id, username, email, first_name, last_name, bio, github_url, 
-               profile_photo, job_title, skills, created_at
+               profile_photo, cv_path, job_title, skills, created_at
         FROM users 
         WHERE id = ?
     ");
@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     // Refresh user data
                     $stmt = $pdo->prepare("
                         SELECT id, username, email, first_name, last_name, bio, github_url, 
-                               profile_photo, job_title, skills, created_at
+                               profile_photo, cv_path, job_title, skills, created_at
                         FROM users 
                         WHERE id = ?
                     ");
@@ -164,6 +164,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             error_log("Skills Update Error: " . $e->getMessage());
             $errors[] = 'Failed to update skills. Please try again.';
         }
+    } elseif ($action === 'upload_cv') {
+        // Handle CV upload
+        if (isset($_FILES['cv_file']) && $_FILES['cv_file']['error'] === UPLOAD_ERR_OK) {
+            $allowedCvTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ];
+            
+            $validation = validateFileUpload($_FILES['cv_file'], $allowedCvTypes, MAX_FILE_SIZE);
+            
+            if (!$validation['valid']) {
+                $errors[] = $validation['error'];
+            } else {
+                $uploadResult = uploadFile($_FILES['cv_file'], UPLOAD_DIR_CV, 'cv');
+                
+                if (!$uploadResult['success']) {
+                    $errors[] = $uploadResult['error'];
+                } else {
+                    $newCvPath = $uploadResult['file_path'];
+                    $oldCvPath = $userData['cv_path'];
+                    
+                    try {
+                        $stmt = $pdo->prepare("UPDATE users SET cv_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                        $success = $stmt->execute([$newCvPath, getCurrentUserId()]);
+                        
+                        if ($success) {
+                            // Delete old CV if exists
+                            if ($oldCvPath && file_exists($oldCvPath)) {
+                                deleteFile($oldCvPath);
+                            }
+                            $userData['cv_path'] = $newCvPath;
+                            setSuccessMessage('CV uploaded successfully!');
+                        }
+                    } catch (PDOException $e) {
+                        error_log("CV Upload DB Error: " . $e->getMessage());
+                        $errors[] = 'Failed to update database. Please try again.';
+                        // Clean up uploaded file since DB update failed
+                        deleteFile($newCvPath);
+                    }
+                }
+            }
+        } else {
+            $errors[] = 'Please select a file to upload.';
+        }
     }
 }
 
@@ -180,23 +225,11 @@ if (!empty($userData['skills'])) {
 
 // Convert absolute file paths to relative URLs for web access
 if (!empty($userData['profile_photo'])) {
-    // Convert absolute path to relative URL
-    // Handle /opt/lampp/htdocs/DevShowcase/ paths
-    if (strpos($userData['profile_photo'], '/opt/lampp/htdocs/DevShowcase/') !== false) {
-        $userData['profile_photo'] = str_replace('/opt/lampp/htdocs/DevShowcase/', '', $userData['profile_photo']);
-    }
-    
-    // Handle config/../ pattern (resolve parent directory)
-    $userData['profile_photo'] = str_replace('config/../', '', $userData['profile_photo']);
-    
-    // Clean up any double slashes
-    $userData['profile_photo'] = preg_replace('#/+#', '/', $userData['profile_photo']);
-    
-    // Ensure it starts with uploads/ for web access
-    // Extract just the part after uploads/ if it exists in the path
-    if (preg_match('#uploads/(.+)$#', $userData['profile_photo'], $matches)) {
-        $userData['profile_photo'] = 'uploads/' . $matches[1];
-    }
+    $userData['profile_photo'] = getRelativeUrlPath($userData['profile_photo']);
+}
+
+if (!empty($userData['cv_path'])) {
+    $userData['cv_path'] = getRelativeUrlPath($userData['cv_path']);
 }
 
 // Check for AJAX request (fetch/XMLHttpRequest)

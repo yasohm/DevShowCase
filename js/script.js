@@ -553,11 +553,46 @@ function displayProfile(user, skills) {
     const skillsContainer = document.getElementById('skillsContainer');
     if (skillsContainer) {
         if (skills && Array.isArray(skills) && skills.length > 0) {
-            skillsContainer.innerHTML = skills.map(skill =>
-                `<span class="badge bg-primary me-2 mb-2 px-3 py-2">${escapeHtml(skill)}</span>`
-            ).join('');
+            skillsContainer.innerHTML = skills.map(skill => {
+                const logoUrl = getSkillLogo(skill);
+                return `
+                    <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm">
+                        ${logoUrl ? `<img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" style="width: 20px; height: 20px; object-fit: contain;">` : '<i class="bi bi-cpu me-2 text-primary"></i>'}
+                        <span class="fw-medium">${escapeHtml(skill)}</span>
+                    </div>
+                `;
+            }).join('');
         } else {
             skillsContainer.innerHTML = '<p class="text-muted">No skills added yet. Click "Add Skills" to add them.</p>';
+        }
+    }
+
+    // CV Section
+    const cvContainer = document.getElementById('cvContainer');
+    if (cvContainer) {
+        if (user.cv_path) {
+            const cvFilename = user.cv_path.split('/').pop().split('_').slice(1).join('_') || 'My CV';
+            cvContainer.innerHTML = `
+                <div class="alert alert-info py-2 px-3 mb-2 small text-start d-flex align-items-center">
+                    <i class="bi bi-file-earmark-check me-2 fs-5"></i>
+                    <div class="text-truncate" title="${cvFilename}">${cvFilename}</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="${user.cv_path}" class="btn btn-sm btn-outline-success flex-fill" target="_blank" download>
+                        <i class="bi bi-download me-1"></i>Download
+                    </a>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#uploadCVModal">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </button>
+                </div>
+            `;
+        } else {
+            cvContainer.innerHTML = `
+                <p class="text-muted small mb-2">No CV uploaded yet</p>
+                <button class="btn btn-sm btn-outline-primary w-100" data-bs-toggle="modal" data-bs-target="#uploadCVModal">
+                    <i class="bi bi-upload me-1"></i>Upload CV
+                </button>
+            `;
         }
     }
 
@@ -578,6 +613,103 @@ function displayProfile(user, skills) {
 
     // Populate edit modals
     populateEditModals(user, skills);
+}
+
+/**
+ * Upload CV
+ */
+async function uploadCV() {
+    const form = document.getElementById('uploadCVForm');
+    const fileInput = document.getElementById('cvFile');
+    if (!form || !fileInput.files.length) return;
+
+    const formData = new FormData(form);
+    formData.append('action', 'upload_cv');
+
+    const modalElement = document.getElementById('uploadCVModal');
+    const submitBtn = modalElement.querySelector('button[onclick="uploadCV()"]');
+    const originalBtnText = submitBtn.innerHTML;
+    setButtonLoading(submitBtn, true);
+
+    try {
+        const response = await fetch('profile/profile.php', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('CV uploaded successfully!', 'success');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) modal.hide();
+            form.reset();
+            loadProfile(); // Reload profile
+        } else {
+            showNotification(data.errors ? data.errors.join('\n') : data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error uploading CV:', error);
+        showNotification(error.message || 'An error occurred while uploading the CV.', 'error');
+    } finally {
+        setButtonLoading(submitBtn, false);
+        submitBtn.innerHTML = originalBtnText;
+    }
+}
+
+/**
+ * Get technology logo URL from DevIcon
+ * @param {string} skill Name of the technology
+ * @returns {string|null} URL to the logo SVG or null
+ */
+function getSkillLogo(skill) {
+    const s = skill.toLowerCase().trim();
+    const mapping = {
+        'html': 'html5',
+        'css': 'css3',
+        'javascript': 'javascript',
+        'js': 'javascript',
+        'php': 'php',
+        'python': 'python',
+        'java': 'java',
+        'c#': 'csharp',
+        'c++': 'cplusplus',
+        'ruby': 'ruby',
+        'mysql': 'mysql',
+        'aws': 'amazonwebservices',
+        'git': 'git',
+        'github': 'github',
+        'docker': 'docker',
+        'react': 'react',
+        'vue': 'vuejs',
+        'angular': 'angularjs',
+        'node': 'nodejs',
+        'nodejs': 'nodejs',
+        'mongodb': 'mongodb',
+        'bootstrap': 'bootstrap',
+        'tailwind': 'tailwindcss',
+        'laravel': 'laravel',
+        'django': 'django',
+        'flask': 'flask',
+        'kotlin': 'kotlin',
+        'swift': 'swift',
+        'figma': 'figma',
+        'wordpress': 'wordpress'
+    };
+
+    const iconName = mapping[s] || s.replace(/[^a-z0-9]/g, '');
+
+    // We'll try to use the most common format (original/plain)
+    // Most devicons are available as [name]-original.svg
+    return `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${iconName}/${iconName}-original.svg`;
 }
 
 /**

@@ -18,6 +18,7 @@ define('BASE_URL', 'http://localhost/DevShowcase/');  // TODO: Update with your 
 define('UPLOAD_DIR_PROFILE', __DIR__ . '/../uploads/profiles/');
 define('UPLOAD_DIR_DOCUMENTS', __DIR__ . '/../uploads/documents/');
 define('UPLOAD_DIR_PROJECTS', __DIR__ . '/../uploads/projects/');
+define('UPLOAD_DIR_CV', __DIR__ . '/../uploads/cv/');
 
 // File upload limits
 define('MAX_FILE_SIZE', 10 * 1024 * 1024);  // 10MB
@@ -97,7 +98,8 @@ function createUploadDirectories() {
     $directories = [
         UPLOAD_DIR_PROFILE,
         UPLOAD_DIR_DOCUMENTS,
-        UPLOAD_DIR_PROJECTS
+        UPLOAD_DIR_PROJECTS,
+        UPLOAD_DIR_CV
     ];
     
     foreach ($directories as $dir) {
