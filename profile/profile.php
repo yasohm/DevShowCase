@@ -123,7 +123,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     } elseif ($action === 'update_skills') {
         $skills = $_POST['skills'] ?? '';
-        $skillsArray = is_array($skills) ? $skills : array_map('trim', explode(',', $skills));
+        
+        if (is_array($skills)) {
+            $skillsArray = $skills;
+        } else {
+            // Handle both comma-separated and JSON string (for backward compatibility)
+            $decoded = json_decode($skills, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $skillsArray = $decoded;
+            } else {
+                $skillsArray = array_map('trim', explode(',', $skills));
+            }
+        }
+        
+        // Clean and filter
+        $skillsArray = array_values(array_filter(array_map('sanitizeInput', $skillsArray)));
+        
         try {
             $stmt = $pdo->prepare("UPDATE users SET skills = ? WHERE id = ?");
             if ($stmt->execute([json_encode($skillsArray), $profileUserId])) {
@@ -131,6 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 setSuccessMessage('Skills updated successfully!');
             }
         } catch (PDOException $e) {
+            error_log("Skills Update Error: " . $e->getMessage());
             $errors[] = 'Failed to update skills.';
         }
     } elseif ($action === 'upload_cv') {

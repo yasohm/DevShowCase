@@ -469,9 +469,27 @@ function displayShowcase(user, skills) {
     if (skills && Array.isArray(skills) && skills.length > 0) {
         const skillsContainer = document.querySelector('.hero-section .mb-4, .mb-4 .badge').parentElement;
         if (skillsContainer) {
-            skillsContainer.innerHTML = skills.map(skill =>
-                `<span class="badge bg-light text-primary me-2 mb-2 px-3 py-2">${escapeHtml(skill)}</span>`
-            ).join('');
+            skillsContainer.innerHTML = skills.map(skill => {
+                const logoUrl = getSkillLogo(skill);
+                const fallbackIcon = '<i class="bi bi-cpu me-2 text-primary"></i>';
+
+                if (logoUrl) {
+                    return `
+                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm text-dark">
+                            <img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" style="width: 20px; height: 20px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">
+                            <i class="bi bi-cpu me-2 text-primary" style="display: none;"></i>
+                            <span class="fw-medium">${escapeHtml(skill)}</span>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm text-dark">
+                            ${fallbackIcon}
+                            <span class="fw-medium">${escapeHtml(skill)}</span>
+                        </div>
+                    `;
+                }
+            }).join('');
         }
     }
 }
@@ -653,12 +671,24 @@ function displayProfile(user, skills) {
         if (skills && Array.isArray(skills) && skills.length > 0) {
             skillsContainer.innerHTML = skills.map(skill => {
                 const logoUrl = getSkillLogo(skill);
-                return `
-                    <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm">
-                        ${logoUrl ? `<img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" style="width: 20px; height: 20px; object-fit: contain;">` : '<i class="bi bi-cpu me-2 text-primary"></i>'}
-                        <span class="fw-medium">${escapeHtml(skill)}</span>
-                    </div>
-                `;
+                const fallbackIcon = '<i class="bi bi-cpu me-2 text-primary"></i>';
+
+                if (logoUrl) {
+                    return `
+                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm">
+                            <img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" style="width: 20px; height: 20px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">
+                            <i class="bi bi-cpu me-2 text-primary" style="display: none;"></i>
+                            <span class="fw-medium">${escapeHtml(skill)}</span>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm">
+                            ${fallbackIcon}
+                            <span class="fw-medium">${escapeHtml(skill)}</span>
+                        </div>
+                    `;
+                }
             }).join('');
         } else {
             skillsContainer.innerHTML = '<p class="text-muted">No skills added yet. Click "Add Skills" to add them.</p>';
@@ -775,38 +805,54 @@ function getSkillLogo(skill) {
         'css': 'css3',
         'javascript': 'javascript',
         'js': 'javascript',
+        'typescript': 'typescript',
+        'ts': 'typescript',
         'php': 'php',
         'python': 'python',
         'java': 'java',
-        'c#': 'csharp',
+        'c': 'c',
         'c++': 'cplusplus',
+        'cplusplus': 'cplusplus',
+        'c#': 'csharp',
+        'csharp': 'csharp',
         'ruby': 'ruby',
         'mysql': 'mysql',
+        'postgresql': 'postgresql',
+        'sql': 'mysql',
         'aws': 'amazonwebservices',
         'git': 'git',
         'github': 'github',
         'docker': 'docker',
+        'kubernetes': 'kubernetes',
         'react': 'react',
         'vue': 'vuejs',
         'angular': 'angularjs',
         'node': 'nodejs',
         'nodejs': 'nodejs',
+        'express': 'express',
         'mongodb': 'mongodb',
         'bootstrap': 'bootstrap',
         'tailwind': 'tailwindcss',
+        'sass': 'sass',
+        'less': 'less',
         'laravel': 'laravel',
         'django': 'django',
         'flask': 'flask',
         'kotlin': 'kotlin',
         'swift': 'swift',
         'figma': 'figma',
-        'wordpress': 'wordpress'
+        'wordpress': 'wordpress',
+        'linux': 'linux',
+        'docker': 'docker',
+        'firebase': 'firebase',
+        'flutter': 'flutter',
+        'dart': 'dart'
     };
 
-    const iconName = mapping[s] || s.replace(/[^a-z0-9]/g, '');
+    const iconName = mapping[s];
+    if (!iconName) return null;
 
     // We'll try to use the most common format (original/plain)
-    // Most devicons are available as [name]-original.svg
     return `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${iconName}/${iconName}-original.svg`;
 }
 
@@ -888,7 +934,7 @@ async function saveSkills() {
 
     const formData = new FormData();
     formData.append('action', 'update_skills');
-    formData.append('skills', JSON.stringify(skillsArray));
+    skillsArray.forEach(skill => formData.append('skills[]', skill));
 
     await sendProfileUpdate(formData, 'editSkillsModal', 'Skills updated successfully!');
 }
