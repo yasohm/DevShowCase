@@ -7,8 +7,8 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../helpers/helpers.php';
 
-// Require user to be logged in
-requireLogin('../auth/login.php');
+// Require user to be logged in for management actions
+// requireLogin('../auth/login.php');
 
 $pdo = getDBConnection();
 $errors = [];
@@ -19,12 +19,19 @@ $action = $_GET['action'] ?? $_POST['action'] ?? 'list';
 switch ($action) {
     case 'list':
         // Fetch all documents for current user
+        requireLogin('../auth/login.php');
         getDocuments();
+        break;
+        
+    case 'list_all':
+        // Fetch all documents from all users
+        getAllDocuments();
         break;
         
     case 'create':
     case 'upload':
         // Upload new document
+        requireLogin('../auth/login.php');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             createDocument();
         } else {
@@ -35,6 +42,7 @@ switch ($action) {
     case 'read':
     case 'get':
         // Get single document
+        requireLogin('../auth/login.php');
         $documentId = $_GET['id'] ?? $_POST['id'] ?? null;
         if ($documentId) {
             getDocument($documentId);
@@ -46,6 +54,7 @@ switch ($action) {
     case 'update':
     case 'edit':
         // Update document info
+        requireLogin('../auth/login.php');
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $documentId = $_POST['id'] ?? null;
             if ($documentId) {
@@ -60,6 +69,7 @@ switch ($action) {
         
     case 'delete':
         // Delete document
+        requireLogin('../auth/login.php');
         $documentId = $_GET['id'] ?? $_POST['id'] ?? null;
         if ($documentId) {
             deleteDocument($documentId);
@@ -70,6 +80,7 @@ switch ($action) {
         
     case 'download':
         // Download document file
+        // Allow public download for now, or add more complex permission logic
         $documentId = $_GET['id'] ?? null;
         if ($documentId) {
             downloadDocument($documentId);
@@ -114,6 +125,39 @@ function getDocuments() {
     } catch (PDOException $e) {
         error_log("Get Documents Error: " . $e->getMessage());
         jsonResponse(false, 'Failed to retrieve documents');
+    }
+}
+
+/**
+ * Get all documents from all users
+ */
+function getAllDocuments() {
+    global $pdo;
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT d.id, d.title, d.description, d.file_path, d.file_type, d.file_size, 
+                   d.created_at, d.updated_at, u.username, u.first_name, u.last_name
+            FROM documents d
+            JOIN users u ON d.user_id = u.id
+            ORDER BY d.created_at DESC
+        ");
+        $stmt->execute();
+        $documents = $stmt->fetchAll();
+        
+        // Format for response
+        foreach ($documents as &$document) {
+            $document['author_name'] = trim(($document['first_name'] ?? '') . ' ' . ($document['last_name'] ?? '')) ?: $document['username'];
+            $document['file_size_formatted'] = formatFileSize($document['file_size']);
+            $document['file_url'] = getRelativeUrlPath($document['file_path']);
+            $document['file_extension'] = getFileExtension($document['file_path']);
+        }
+        
+        jsonResponse(true, 'All documents retrieved successfully', ['documents' => $documents]);
+        
+    } catch (PDOException $e) {
+        error_log("Get All Documents Error: " . $e->getMessage());
+        jsonResponse(false, 'Failed to retrieve showcase documents');
     }
 }
 

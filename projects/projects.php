@@ -23,6 +23,11 @@ switch ($action) {
         getProjects();
         break;
         
+    case 'list_all':
+        // Fetch all projects from all users
+        getAllProjects();
+        break;
+        
     case 'create':
     case 'add':
         // Create new project
@@ -116,6 +121,45 @@ function getProjects() {
     } catch (PDOException $e) {
         error_log("Get Projects Error: " . $e->getMessage());
         jsonResponse(false, 'Failed to retrieve projects');
+    }
+}
+
+/**
+ * Get all projects from all users
+ */
+function getAllProjects() {
+    global $pdo;
+    
+    try {
+        $stmt = $pdo->prepare("
+            SELECT p.id, p.title, p.description, p.technologies, p.github_url, p.screenshot, 
+                   p.created_at, p.updated_at, u.username, u.first_name, u.last_name
+            FROM projects p
+            JOIN users u ON p.user_id = u.id
+            ORDER BY p.created_at DESC
+        ");
+        $stmt->execute();
+        $projects = $stmt->fetchAll();
+        
+        // Parse technologies and format URLs for each project
+        foreach ($projects as &$project) {
+            $project['technologies'] = parseTechnologies($project['technologies']);
+            $project['author_name'] = trim(($project['first_name'] ?? '') . ' ' . ($project['last_name'] ?? '')) ?: $project['username'];
+            
+            if ($project['screenshot']) {
+                if (filter_var($project['screenshot'], FILTER_VALIDATE_URL)) {
+                    $project['screenshot_url'] = $project['screenshot'];
+                } else {
+                    $project['screenshot_url'] = getRelativeUrlPath($project['screenshot']);
+                }
+            }
+        }
+        
+        jsonResponse(true, 'All projects retrieved successfully', ['projects' => $projects]);
+        
+    } catch (PDOException $e) {
+        error_log("Get All Projects Error: " . $e->getMessage());
+        jsonResponse(false, 'Failed to retrieve showcase projects');
     }
 }
 

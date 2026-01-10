@@ -473,22 +473,13 @@ function displayShowcase(user, skills) {
                 const logoUrl = getSkillLogo(skill);
                 const fallbackIcon = '<i class="bi bi-cpu me-2 text-primary"></i>';
 
-                if (logoUrl) {
-                    return `
-                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm text-dark">
-                            <img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" style="width: 20px; height: 20px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">
-                            <i class="bi bi-cpu me-2 text-primary" style="display: none;"></i>
-                            <span class="fw-medium">${escapeHtml(skill)}</span>
-                        </div>
-                    `;
-                } else {
-                    return `
-                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm text-dark">
-                            ${fallbackIcon}
-                            <span class="fw-medium">${escapeHtml(skill)}</span>
-                        </div>
-                    `;
-                }
+                return `
+                    <div class="skill-badge rounded-pill px-3 py-2 me-2 mb-2 bg-white border shadow-sm">
+                        ${logoUrl ? `<img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">` : ''}
+                        <i class="bi bi-cpu me-2 text-primary" style="${logoUrl ? 'display: none;' : ''}"></i>
+                        <span class="fw-medium text-dark">${escapeHtml(skill)}</span>
+                    </div>
+                `;
             }).join('');
         }
     }
@@ -520,7 +511,7 @@ function showLoginPrompt() {
 /**
  * Display projects
  */
-function displayProjects(projects, maxCount = null) {
+function displayProjects(projects, maxCount = null, isGlobal = false) {
     const container = document.querySelector('.row.g-4');
     if (!container) return;
 
@@ -529,12 +520,15 @@ function displayProjects(projects, maxCount = null) {
     const projectsToShow = maxCount ? projects.slice(0, maxCount) : projects;
 
     if (projectsToShow.length === 0) {
-        container.innerHTML = '<div class="col-12 text-center"><p class="text-muted">No projects yet. Add your first project!</p></div>';
+        container.innerHTML = `<div class="col-12 text-center py-5">
+            <i class="bi bi-folder2-open text-muted" style="font-size: 4rem;"></i>
+            <p class="text-muted mt-3">${isGlobal ? 'No projects found in the community.' : 'No projects yet. Add your first project!'}</p>
+        </div>`;
         return;
     }
 
     projectsToShow.forEach(project => {
-        const projectCard = createProjectCard(project);
+        const projectCard = createProjectCard(project, isGlobal);
         container.appendChild(projectCard);
     });
 }
@@ -542,7 +536,7 @@ function displayProjects(projects, maxCount = null) {
 /**
  * Create project card element
  */
-function createProjectCard(project) {
+function createProjectCard(project, isGlobal = false) {
     const col = document.createElement('div');
     col.className = 'col-md-6 col-lg-4';
 
@@ -564,7 +558,14 @@ function createProjectCard(project) {
           </a>`
         : '';
 
-    const editDeleteBtns = window.location.pathname.includes('projects.html')
+    const authorInfo = isGlobal
+        ? `<div class="d-flex align-items-center mb-3">
+            <i class="bi bi-person-circle text-muted me-2"></i>
+            <small class="text-muted fw-medium">By ${escapeHtml(project.author_name || 'Community Member')}</small>
+          </div>`
+        : '';
+
+    const editDeleteBtns = (window.location.pathname.includes('projects.html') && !isGlobal)
         ? `<button class="btn btn-outline-secondary btn-sm" onclick="editProject(${project.id})">
             <i class="bi bi-pencil"></i>
           </button>
@@ -575,12 +576,20 @@ function createProjectCard(project) {
 
     col.innerHTML = `
         <div class="card h-100 shadow-sm hover-shadow border-0">
-            ${screenshot}
-            <div class="card-body d-flex flex-column">
+            <div class="position-relative">
+                ${screenshot}
+                <a href="view.html?type=project&id=${project.id}" class="stretched-link"></a>
+            </div>
+            <div class="card-body d-flex flex-column" style="position: relative; z-index: 2;">
                 <h5 class="card-title fw-bold">${escapeHtml(project.title)}</h5>
-                <p class="card-text text-muted flex-grow-1">${escapeHtml(project.description)}</p>
+                ${authorInfo}
+                <p class="card-text text-muted flex-grow-1 small">${escapeHtml(project.description)}</p>
                 ${badges ? `<div class="mb-3">${badges}</div>` : ''}
-                ${githubBtn || editDeleteBtns ? `<div class="d-flex gap-2">${githubBtn}${editDeleteBtns}</div>` : ''}
+                <div class="d-flex gap-2">
+                    ${githubBtn}
+                    ${editDeleteBtns}
+                    <a href="view.html?type=project&id=${project.id}" class="btn btn-primary btn-sm ${!githubBtn && !editDeleteBtns ? 'flex-fill' : ''}">Details</a>
+                </div>
             </div>
         </div>
     `;
@@ -675,17 +684,17 @@ function displayProfile(user, skills) {
 
                 if (logoUrl) {
                     return `
-                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm">
-                            <img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" style="width: 20px; height: 20px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">
+                        <div class="skill-badge rounded-pill px-3 py-2 me-2 mb-2 bg-white border shadow-sm">
+                            <img src="${logoUrl}" alt="${skill}" class="skill-logo me-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">
                             <i class="bi bi-cpu me-2 text-primary" style="display: none;"></i>
-                            <span class="fw-medium">${escapeHtml(skill)}</span>
+                            <span class="fw-medium text-dark">${escapeHtml(skill)}</span>
                         </div>
                     `;
                 } else {
                     return `
-                        <div class="skill-badge d-inline-flex align-items-center bg-white border rounded-pill px-3 py-2 me-2 mb-2 shadow-sm">
+                        <div class="skill-badge rounded-pill px-3 py-2 me-2 mb-2 bg-white border shadow-sm">
                             ${fallbackIcon}
-                            <span class="fw-medium">${escapeHtml(skill)}</span>
+                            <span class="fw-medium text-dark">${escapeHtml(skill)}</span>
                         </div>
                     `;
                 }
@@ -1028,7 +1037,21 @@ async function uploadProfilePhoto() {
  */
 async function loadProjects() {
     try {
-        const response = await fetch('projects/projects.php?action=list', {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isGlobal = urlParams.get('view') === 'all';
+        const action = isGlobal ? 'list_all' : 'list';
+
+        // Update page title if global view
+        if (isGlobal) {
+            const titleElement = document.querySelector('.section-title');
+            if (titleElement) titleElement.textContent = 'Community Projects';
+
+            // Hide "Add New Project" button in global view
+            const addBtn = document.querySelector('[data-bs-target="#addProjectModal"]');
+            if (addBtn) addBtn.style.display = 'none';
+        }
+
+        const response = await fetch(`projects/projects.php?action=${action}`, {
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
@@ -1042,7 +1065,7 @@ async function loadProjects() {
         const data = await response.json();
 
         if (data.success) {
-            displayProjects(data.data.projects || [], null);
+            displayProjects(data.data.projects || [], null, isGlobal);
         } else {
             showNotification('Failed to load projects', 'error');
         }
@@ -1258,7 +1281,21 @@ async function deleteProjectById(projectId) {
  */
 async function loadDocuments() {
     try {
-        const response = await fetch('documents/documents.php?action=list', {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isGlobal = urlParams.get('view') === 'all';
+        const action = isGlobal ? 'list_all' : 'list';
+
+        // Update page title if global view
+        if (isGlobal) {
+            const titleElement = document.querySelector('.section-title');
+            if (titleElement) titleElement.textContent = 'Community Resources';
+
+            // Hide "Upload Document" button in global view
+            const uploadBtn = document.querySelector('[data-bs-target="#uploadDocumentModal"]');
+            if (uploadBtn) uploadBtn.style.display = 'none';
+        }
+
+        const response = await fetch(`documents/documents.php?action=${action}`, {
             headers: {
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
@@ -1272,7 +1309,7 @@ async function loadDocuments() {
         const data = await response.json();
 
         if (data.success) {
-            displayDocuments(data.data.documents || []);
+            displayDocuments(data.data.documents || [], isGlobal);
         } else {
             showNotification('Failed to load documents', 'error');
         }
@@ -1285,7 +1322,7 @@ async function loadDocuments() {
 /**
  * Display documents
  */
-function displayDocuments(documents) {
+function displayDocuments(documents, isGlobal = false) {
     const container = document.querySelector('.row.g-4');
     const emptyState = document.getElementById('emptyState');
 
@@ -1294,14 +1331,24 @@ function displayDocuments(documents) {
     container.innerHTML = '';
 
     if (documents.length === 0) {
-        if (emptyState) emptyState.classList.remove('d-none');
+        if (emptyState) {
+            emptyState.classList.remove('d-none');
+            const emptyTitle = emptyState.querySelector('h4');
+            const emptyText = emptyState.querySelector('p');
+            if (isGlobal) {
+                if (emptyTitle) emptyTitle.textContent = 'No Showcase Resources';
+                if (emptyText) emptyText.textContent = 'The community hasn\'t shared any public documents yet.';
+                const emptyBtn = emptyState.querySelector('button');
+                if (emptyBtn) emptyBtn.style.display = 'none';
+            }
+        }
         return;
     }
 
     if (emptyState) emptyState.classList.add('d-none');
 
     documents.forEach(doc => {
-        const docCard = createDocumentCard(doc);
+        const docCard = createDocumentCard(doc, isGlobal);
         container.appendChild(docCard);
     });
 }
@@ -1309,7 +1356,7 @@ function displayDocuments(documents) {
 /**
  * Create document card element
  */
-function createDocumentCard(doc) {
+function createDocumentCard(doc, isGlobal = false) {
     const col = document.createElement('div');
     col.className = 'col-md-6 col-lg-4';
 
@@ -1324,7 +1371,7 @@ function createDocumentCard(doc) {
         'jpeg': 'bi-file-earmark-image text-success'
     };
 
-    const extension = doc.file_extension || doc.file_type.toLowerCase();
+    const extension = (doc.file_extension || doc.file_type || 'file').toLowerCase();
     const iconClass = iconMap[extension] || 'bi-file-earmark text-secondary';
 
     // Check if the file is an image
@@ -1341,26 +1388,35 @@ function createDocumentCard(doc) {
         ? `<span class="badge bg-${extension === 'pdf' ? 'danger' : extension.includes('doc') ? 'primary' : extension.includes('xls') ? 'success' : 'secondary'}-subtle text-${extension === 'pdf' ? 'danger' : extension.includes('doc') ? 'primary' : extension.includes('xls') ? 'success' : 'secondary'}">${doc.file_type.toUpperCase()}</span>`
         : '';
 
+    const authorInfo = isGlobal
+        ? `<p class="text-muted small mb-2"><i class="bi bi-person me-1"></i>By ${escapeHtml(doc.author_name || 'Member')}</p>`
+        : '';
+
+    const editDeleteBtns = (window.location.pathname.includes('documents.html') && !isGlobal)
+        ? `<button class="btn btn-outline-secondary btn-sm" onclick="editDocument(${doc.id})">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-outline-danger btn-sm" onclick="deleteDocumentById(${doc.id})">
+            <i class="bi bi-trash"></i>
+          </button>`
+        : '';
+
     col.innerHTML = `
         <div class="card h-100 shadow-sm hover-shadow border-0">
             <div class="card-body d-flex flex-column">
                 ${previewHtml}
-                <h5 class="card-title fw-bold">${escapeHtml(doc.title)}</h5>
+                <h5 class="card-title fw-bold mb-1">${escapeHtml(doc.title)}</h5>
+                ${authorInfo}
                 <p class="text-muted mb-2">
                     ${typeBadge}
                     <span class="ms-2 small">${doc.file_size_formatted || formatFileSize(doc.file_size || 0)}</span>
                 </p>
                 ${doc.description ? `<p class="card-text text-muted flex-grow-1 small">${escapeHtml(doc.description)}</p>` : ''}
                 <div class="mt-auto d-flex gap-2">
-                    <a href="documents/documents.php?action=download&id=${doc.id}" class="btn btn-outline-primary btn-sm flex-fill" download>
+                    <a href="documents/documents.php?action=download&id=${doc.id}" class="btn btn-primary btn-sm flex-fill" download>
                         <i class="bi bi-download me-1"></i>Download
                     </a>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="editDocument(${doc.id})">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm" onclick="deleteDocumentById(${doc.id})">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                    ${editDeleteBtns}
                 </div>
             </div>
         </div>
@@ -1738,16 +1794,18 @@ function displayMemberView(user, skills) {
     // Render skills
     const skillsContainer = document.getElementById('memberSkills');
     if (skillsContainer && skills.length > 0) {
-        skills.forEach(skill => {
+        skillsContainer.innerHTML = skills.map(skill => {
             const logo = getSkillLogo(skill);
-            const badge = document.createElement('div');
-            badge.className = 'skill-badge badge border py-2 px-3 text-dark d-flex align-items-center bg-white shadow-sm';
-            badge.innerHTML = `
-                ${logo ? `<img src="${logo}" alt="${skill}" class="skill-logo me-2">` : '<i class="bi bi-code-slash me-2 text-primary"></i>'}
-                <span>${escapeHtml(skill)}</span>
+            const fallbackIcon = '<i class="bi bi-code-slash me-2 text-primary"></i>';
+
+            return `
+                <div class="skill-badge rounded-pill px-3 py-2 bg-white border shadow-sm">
+                    ${logo ? `<img src="${logo}" alt="${skill}" class="skill-logo me-2" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block'">` : ''}
+                    <i class="bi bi-code-slash me-2 text-primary" style="${logo ? 'display: none;' : ''}"></i>
+                    <span class="fw-medium text-dark">${escapeHtml(skill)}</span>
+                </div>
             `;
-            skillsContainer.appendChild(badge);
-        });
+        }).join('');
     } else if (skillsContainer) {
         skillsContainer.innerHTML = '<p class="text-muted">No skills listed</p>';
     }

@@ -22,11 +22,18 @@
 }
 
 /* === Global Styles === */
+html {
+    height: 100%;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: var(--dark-color);
     background-color: #ffffff;
     line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
 }
 
 /* === Navigation Bar === */
@@ -182,7 +189,7 @@ body {
 /* === Authentication Pages === */
 .auth-body {
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    min-height: 100vh;
+    min-height: 100%;
 }
 
 .auth-card {
@@ -223,7 +230,7 @@ body {
 
 /* === Footer === */
 footer {
-    margin-top: auto;
+    margin-top: auto !important;
 }
 
 /* === Utilities === */
@@ -240,25 +247,25 @@ footer {
     .hero-section {
         padding: 80px 0 40px;
     }
-    
+
     .profile-img {
         width: 120px;
         height: 120px;
     }
-    
+
     .profile-img-large {
         width: 150px;
         height: 150px;
     }
-    
+
     .section-title {
         font-size: 1.75rem;
     }
-    
+
     .auth-card .card-body {
         padding: 2rem;
     }
-    
+
     .card-img-top {
         height: 180px;
     }
@@ -268,7 +275,7 @@ footer {
     .display-4 {
         font-size: 2rem;
     }
-    
+
     .hero-section {
         padding: 60px 0 30px;
     }
@@ -280,6 +287,7 @@ footer {
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -325,16 +333,23 @@ footer {
     transition: all 0.2s ease;
     cursor: default;
     border-color: #e9ecef !important;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
 }
 
 .skill-badge:hover {
     transform: translateY(-2px);
-    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
+    box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .075) !important;
     border-color: #dee2e6 !important;
 }
 
 .skill-logo {
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.05));
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.05));
+    flex-shrink: 0;
 }
 
 /* Transitions and Hover Effects */
@@ -344,13 +359,14 @@ footer {
 
 .hover-shadow:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
 }
 
 .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;  
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
@@ -358,4 +374,3 @@ footer {
 .border-primary-subtle {
     border-color: rgba(13, 110, 253, 0.2) !important;
 }
-
