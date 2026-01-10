@@ -32,5 +32,5 @@ if (isset($_COOKIE['remember_token'])) {
 
 // Redirect to login page
 setSuccessMessage('You have been successfully logged out.');
-redirect('../auth/login.php');
+redirect('../login.html');
 

@@ -25,7 +25,7 @@ if (!$profileUserId && !isset($_GET['id'])) {
     if ($isAjax) {
         jsonResponse(false, 'Login required');
     } else {
-        requireLogin('../auth/login.php');
+        requireLogin('../login.html');
     }
 }
 
