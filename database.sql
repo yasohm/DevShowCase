@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS `users` (
     `bio` TEXT DEFAULT NULL,
     `github_url` VARCHAR(255) DEFAULT NULL,
     `profile_photo` VARCHAR(255) DEFAULT NULL COMMENT 'Path to profile photo',
+    `banner_photo` VARCHAR(255) DEFAULT NULL COMMENT 'Path to banner photo',
     `job_title` VARCHAR(100) DEFAULT NULL,
+
     `skills` TEXT DEFAULT NULL COMMENT 'JSON array of skills',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

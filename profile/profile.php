@@ -33,7 +33,7 @@ if (!$profileUserId && !isset($_GET['id'])) {
 try {
     $stmt = $pdo->prepare("
         SELECT id, username, email, first_name, last_name, bio, github_url, 
-               profile_photo, cv_path, job_title, skills, created_at
+               profile_photo, banner_photo, cv_path, job_title, skills, created_at
         FROM users 
         WHERE id = ?
     ");
@@ -98,15 +98,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
         
+        // Update banner photo
+        $bannerPhotoPath = $userData['banner_photo'];
+        if (isset($_FILES['banner_photo']) && $_FILES['banner_photo']['error'] === UPLOAD_ERR_OK) {
+            $validation = validateFileUpload($_FILES['banner_photo'], ALLOWED_IMAGE_TYPES, MAX_PROFILE_IMAGE_SIZE);
+            
+            if (!$validation['valid']) {
+                $errors[] = $validation['error'];
+            } else {
+                $uploadResult = uploadFile($_FILES['banner_photo'], UPLOAD_DIR_BANNERS, 'banner');
+                if ($uploadResult['success']) {
+                    if ($bannerPhotoPath && file_exists(__DIR__ . '/../' . $bannerPhotoPath)) {
+                        deleteFile(__DIR__ . '/../' . $bannerPhotoPath);
+                    }
+                    $bannerPhotoPath = $uploadResult['file_path'];
+                } else {
+                    $errors[] = $uploadResult['error'];
+                }
+            }
+        }
+
+        
         if (empty($errors)) {
             try {
                 $stmt = $pdo->prepare("
                     UPDATE users 
                     SET first_name = ?, last_name = ?, bio = ?, github_url = ?, 
-                        profile_photo = ?, job_title = ?, updated_at = CURRENT_TIMESTAMP
+                        profile_photo = ?, banner_photo = ?, job_title = ?, updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                 ");
-                $success = $stmt->execute([$firstName, $lastName, $bio, $githubUrl, $profilePhotoPath, $jobTitle, $profileUserId]);
+                $success = $stmt->execute([$firstName, $lastName, $bio, $githubUrl, $profilePhotoPath, $bannerPhotoPath, $jobTitle, $profileUserId]);
                 if ($success) {
                     setSuccessMessage('Profile updated successfully!');
                     $userData['first_name'] = $firstName;
@@ -114,8 +135,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $userData['bio'] = $bio;
                     $userData['github_url'] = $githubUrl;
                     $userData['profile_photo'] = $profilePhotoPath;
+                    $userData['banner_photo'] = $bannerPhotoPath;
                     $userData['job_title'] = $jobTitle;
                 }
+
             } catch (PDOException $e) {
                 error_log("Profile Update Error: " . $e->getMessage());
                 $errors[] = 'Failed to update profile.';
@@ -182,6 +205,10 @@ if (!empty($userData['skills'])) {
 if (!empty($userData['profile_photo'])) {
     $userData['profile_photo'] = getRelativeUrlPath($userData['profile_photo']);
 }
+if (!empty($userData['banner_photo'])) {
+    $userData['banner_photo'] = getRelativeUrlPath($userData['banner_photo']);
+}
+
 if (!empty($userData['cv_path'])) {
     $userData['cv_path'] = getRelativeUrlPath($userData['cv_path']);
 }

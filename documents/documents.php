@@ -470,6 +470,69 @@ function downloadDocument($documentId) {
     }
 }
 
+/**
+ * View document file inline
+ */
+function viewDocument($documentId) {
+    global $pdo;
+    
+    try {
+        // Verify document exists and get file info (allow public access like download)
+        $stmt = $pdo->prepare("
+            SELECT id, title, file_path, file_type 
+            FROM documents 
+            WHERE id = ?
+        ");
+        $stmt->execute([$documentId]);
+        $document = $stmt->fetch();
+        
+        if (!$document) {
+            header('HTTP/1.1 404 Not Found');
+            echo 'Document not found';
+            exit();
+        }
+        
+        $filePath = $document['file_path'];
+        
+        // Check if file exists
+        if (!file_exists($filePath) || !is_file($filePath)) {
+            header('HTTP/1.1 404 Not Found');
+            echo 'File not found on server';
+            exit();
+        }
+        
+        // Set headers for inline viewing
+        $filename = $document['title'] . '.' . pathinfo($filePath, PATHINFO_EXTENSION);
+        $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+        
+        // Force specific mime types for better browser handling
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        if ($extension === 'pdf') {
+            $mimeType = 'application/pdf';
+        } elseif (in_array($extension, ['jpg', 'jpeg'])) {
+            $mimeType = 'image/jpeg';
+        } elseif ($extension === 'png') {
+            $mimeType = 'image/png';
+        }
+        
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: inline; filename="' . basename($filename) . '"');
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: public, max-age=3600'); // Cache for 1 hour
+        header('Pragma: public');
+        
+        // Output file
+        readfile($filePath);
+        exit();
+        
+    } catch (PDOException $e) {
+        error_log("View Document Error: " . $e->getMessage());
+        header('HTTP/1.1 500 Internal Server Error');
+        echo 'Failed to view document';
+        exit();
+    }
+}
+
 // TODO: Frontend integration point
 // AJAX endpoints:
 // GET  /documents/documents.php?action=list - Get all documents

@@ -374,3 +374,70 @@ footer {
 .border-primary-subtle {
     border-color: rgba(13, 110, 253, 0.2) !important;
 }
+
+/* Banner Styles */
+.profile-banner-container {
+    position: relative;
+    height: 300px;
+    background-color: var(--primary-color);
+    background-size: cover;
+    background-position: center;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin-bottom: -100px;
+    z-index: 1;
+}
+
+.profile-banner-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%);
+    pointer-events: none;
+}
+
+.view-header.has-banner {
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.view-header.has-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 0;
+}
+
+.view-header.has-banner .container {
+    position: relative;
+    z-index: 1;
+}
+
+.banner-upload-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.banner-upload-btn:hover {
+    background: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}

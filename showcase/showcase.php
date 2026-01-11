@@ -76,12 +76,18 @@ try {
     }
     unset($doc);
 
+    // 4. Get Total Members Count
+    $countStmt = $pdo->query("SELECT COUNT(*) FROM users");
+    $totalMembers = $countStmt->fetchColumn();
+
     // Final response
     $response = [
         'success' => true,
         'members' => $members,
         'projects' => $projects,
-        'documents' => $documents
+        'documents' => $documents,
+        'total_members' => $totalMembers,
+        'is_logged_in' => isLoggedIn()
     ];
 
 } catch (PDOException $e) {

@@ -294,6 +294,22 @@ async function loadPublicShowcase() {
         const data = await response.json();
 
         if (data.success) {
+            // Update Community Button Logic
+            const joinBtn = document.getElementById('joinCommunityBtn');
+            console.log('Community Button Logic - Join Btn:', joinBtn);
+            console.log('Community Button Logic - Data:', data);
+
+            if (joinBtn) {
+                if (data.is_logged_in) {
+                    console.log('User is logged in. Updating button.');
+                    joinBtn.textContent = `${data.total_members || 0} Community Members`;
+                } else {
+                    console.log('User is NOT logged in. Default button.');
+                    joinBtn.textContent = 'Join the Community';
+                    joinBtn.href = 'register.html';
+                }
+            }
+
             displayMembers(data.members || []);
             displayShowcaseProjects(data.projects || []);
             displayShowcaseDocuments(data.documents || []);
@@ -632,7 +648,14 @@ async function loadProfile() {
  * Display profile data
  */
 function displayProfile(user, skills) {
+    // Banner picture
+    const bannerArea = document.getElementById('profileBanner');
+    if (bannerArea && user.banner_photo) {
+        bannerArea.style.backgroundImage = `url(${user.banner_photo})`;
+    }
+
     // Profile picture
+
     const profileImg = document.querySelector('.profile-img-large');
     if (profileImg) {
         profileImg.src = user.profile_photo || 'https://via.placeholder.com/200x200/4a90e2/ffffff?text=Profile';
@@ -782,20 +805,19 @@ async function uploadCV() {
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
-        const data = await response.json();
-
-        if (data.success) {
+        const result = await response.json();
+        if (result.success) {
             showNotification('CV uploaded successfully!', 'success');
             const modal = bootstrap.Modal.getInstance(modalElement);
             if (modal) modal.hide();
             form.reset();
-            loadProfile(); // Reload profile
+            loadProfile(); // Reload data
         } else {
-            showNotification(data.errors ? data.errors.join('\n') : data.message, 'error');
+            showNotification(result.errors ? result.errors.join('\n') : 'Upload failed', 'error');
         }
     } catch (error) {
         console.error('Error uploading CV:', error);
-        showNotification(error.message || 'An error occurred while uploading the CV.', 'error');
+        showNotification('Failed to upload CV', 'error');
     } finally {
         setButtonLoading(submitBtn, false);
         submitBtn.innerHTML = originalBtnText;
@@ -803,6 +825,53 @@ async function uploadCV() {
 }
 
 /**
+ * Upload Banner Photo
+ */
+async function uploadBannerPhoto() {
+    const form = document.getElementById('uploadBannerForm');
+    const fileInput = document.getElementById('bannerPhotoInput');
+    if (!form || !fileInput.files.length) return;
+
+    const formData = new FormData(form);
+    const modalElement = document.getElementById('uploadBannerModal');
+    const submitBtn = modalElement.querySelector('button[onclick="uploadBannerPhoto()"]');
+    const originalBtnText = submitBtn.innerHTML;
+    setButtonLoading(submitBtn, true);
+
+    try {
+        const response = await fetch('profile/profile.php', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const result = await response.json();
+        if (result.success) {
+            showNotification('Banner updated!', 'success');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) modal.hide();
+            loadProfile(); // Reload data
+        } else {
+            showNotification(result.errors ? result.errors.join('\n') : 'Upload failed', 'error');
+        }
+    } catch (error) {
+        console.error('Error uploading banner:', error);
+        showNotification('Failed to upload banner', 'error');
+    } finally {
+        setButtonLoading(submitBtn, false);
+        submitBtn.innerHTML = originalBtnText;
+    }
+}
+
+/**
+
  * Get technology logo URL from DevIcon
  * @param {string} skill Name of the technology
  * @returns {string|null} URL to the logo SVG or null
@@ -1716,10 +1785,11 @@ async function loadViewer() {
 
         if (result.success) {
             if (type === 'member') {
-                displayMemberView(data.user, data.skills || []);
+                displayMemberView(data.user, data.skills || [], result.is_owner);
             } else if (type === 'project') {
-                displayProjectView(data.project);
+                displayProjectView(data.project, result.is_owner);
             }
+
         } else {
             document.getElementById('viewContent').innerHTML = `
                 <div class="container py-5 mt-5 text-center">
@@ -1739,7 +1809,8 @@ async function loadViewer() {
 /**
  * Display Member Profile in Viewer
  */
-function displayMemberView(user, skills) {
+function displayMemberView(user, skills, isOwner = false) {
+
     const container = document.getElementById('viewContent');
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
     const photo = user.profile_photo || 'https://via.placeholder.com/300x300/4a90e2/ffffff?text=' + user.username.substring(0, 1).toUpperCase();
@@ -1748,8 +1819,15 @@ function displayMemberView(user, skills) {
     document.title = `${fullName} - DevShowcase`;
 
     container.innerHTML = `
-        <div class="view-header">
+        <div class="view-header ${user.banner_photo ? 'has-banner' : ''}" ${user.banner_photo ? `style="background-image: url(${user.banner_photo});"` : ''}>
             <div class="container">
+                ${isOwner ? `
+                <button class="banner-upload-btn shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadBannerModal">
+                    <i class="bi bi-image me-2"></i>Change Banner
+                </button>
+                ` : ''}
+
+
                 <div class="row align-items-center">
                     <div class="col-md-3 text-center mb-4 mb-md-0">
                         <img src="${photo}" class="rounded-circle img-fluid shadow-lg border border-4 border-white-50" style="width: 200px; height: 200px; object-fit: cover;">
@@ -1814,16 +1892,23 @@ function displayMemberView(user, skills) {
 /**
  * Display Project Detail in Viewer
  */
-function displayProjectView(project) {
+function displayProjectView(project, isOwner = false) {
     const container = document.getElementById('viewContent');
     const screenshot = project.screenshot_url || 'https://via.placeholder.com/1200x600/f8f9fa/6c757d?text=No+Screenshot';
+    const bannerPhoto = project.banner_photo ? getRelativeUrlPath(project.banner_photo) : null;
 
     // Set page title
     document.title = `${project.title} - DevShowcase`;
 
     container.innerHTML = `
-        <div class="view-header">
+        <div class="view-header ${bannerPhoto ? 'has-banner' : ''}" ${bannerPhoto ? `style="background-image: url(${bannerPhoto});"` : ''}>
             <div class="container text-center">
+                ${isOwner ? `
+                <button class="banner-upload-btn shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadBannerModal">
+                    <i class="bi bi-image me-2"></i>Change Banner
+                </button>
+                ` : ''}
+
                 <span class="badge bg-white text-primary mb-3 px-3 py-2 fw-bold text-uppercase">${escapeHtml(project.category || 'Project')}</span>
                 <h1 class="display-3 fw-bold mb-3">${escapeHtml(project.title)}</h1>
                 <div class="d-flex justify-content-center align-items-center">
