@@ -313,11 +313,37 @@ async function loadPublicShowcase() {
             displayMembers(data.members || []);
             displayShowcaseProjects(data.projects || []);
             displayShowcaseDocuments(data.documents || []);
+
+            // Handle Homepage Hero Banner
+            const heroSection = document.getElementById('homepageHero');
+            const btnContainer = document.getElementById('homepageBannerBtnContainer');
+
+            if (heroSection && data.is_logged_in) {
+                // Fetch logged in user's banner
+                try {
+                    const profileRes = await fetch('profile/profile.php', {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const profileData = await profileRes.json();
+
+                    if (profileData.success && profileData.user && profileData.user.banner_photo) {
+                        const bannerPath = getRelativeUrlPath(profileData.user.banner_photo);
+                        heroSection.classList.add('has-banner');
+                        heroSection.style.backgroundImage = `url(${bannerPath})`;
+                    }
+
+
+
+                } catch (err) {
+                    console.error('Error loading user banner for home:', err);
+                }
+            }
         }
     } catch (error) {
         console.error('Error loading community showcase:', error);
     }
 }
+
 
 /**
  * Display community members
@@ -633,7 +659,7 @@ async function loadProfile() {
         const data = await response.json();
 
         if (data.success && data.user) {
-            displayProfile(data.user, data.skills || []);
+            displayProfile(data.user, data.skills || [], data.projects || [], data.documents || []);
         } else {
             // Redirect to login if not authenticated
             window.location.href = 'login.html';
@@ -647,7 +673,7 @@ async function loadProfile() {
 /**
  * Display profile data
  */
-function displayProfile(user, skills) {
+function displayProfile(user, skills, projects = [], documents = []) {
     // Banner picture
     const bannerArea = document.getElementById('profileBanner');
     if (bannerArea && user.banner_photo) {
@@ -682,7 +708,7 @@ function displayProfile(user, skills) {
     const githubLink = document.querySelector('a[href*="github"]');
     if (githubLink) {
         if (user.github_url) {
-            githubLink.href = user.github_url;
+            githubLink.href = ensureAbsoluteUrl(user.github_url);
             githubLink.style.display = '';
         } else {
             githubLink.style.display = 'none';
@@ -765,7 +791,8 @@ function displayProfile(user, skills) {
     const contactGithub = document.getElementById('contactGithub');
     if (contactGithub) {
         if (user.github_url) {
-            contactGithub.innerHTML = `<a href="${user.github_url}" target="_blank" class="text-decoration-none">${user.github_url}</a>`;
+            const absoluteUrl = ensureAbsoluteUrl(user.github_url);
+            contactGithub.innerHTML = `<a href="${absoluteUrl}" target="_blank" class="text-decoration-none">${escapeHtml(user.github_url)}</a>`;
         } else {
             contactGithub.textContent = 'Not provided';
         }
@@ -773,6 +800,68 @@ function displayProfile(user, skills) {
 
     // Populate edit modals
     populateEditModals(user, skills);
+
+    // Render Projects Collection
+    const projectsContainer = document.getElementById('profileProjectsContainer');
+    if (projectsContainer) {
+        if (projects && projects.length > 0) {
+            projectsContainer.innerHTML = projects.map(project => `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 border shadow-sm hover-up">
+                        <div class="card-body p-3">
+                            <h6 class="fw-bold mb-1 text-truncate">${escapeHtml(project.title)}</h6>
+                            <p class="text-muted small mb-2 text-truncate-2">${escapeHtml(project.description)}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <span class="badge bg-light text-primary small border">${escapeHtml(project.category || 'Project')}</span>
+                                <a href="view.html?type=project&id=${project.id}" class="btn btn-sm btn-link p-0 text-decoration-none">View Details <i class="bi bi-arrow-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            projectsContainer.innerHTML = `
+                <div class="col-12 text-center py-4">
+                    <i class="bi bi-folder2-open display-4 text-muted mb-3 d-block"></i>
+                    <p class="text-muted">No projects added yet.</p>
+                </div>
+            `;
+        }
+    }
+
+    // Render Documents Collection
+    const documentsContainer = document.getElementById('profileDocumentsContainer');
+    if (documentsContainer) {
+        if (documents && documents.length > 0) {
+            documentsContainer.innerHTML = documents.map(doc => `
+                <div class="col-md-6">
+                    <div class="card h-100 border shadow-sm hover-up">
+                        <div class="card-body p-3 d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <i class="bi ${getFileIcon(doc.file_type)} fs-2 text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1 min-width-0">
+                                <h6 class="fw-bold mb-0 text-truncate">${escapeHtml(doc.title)}</h6>
+                                <p class="text-muted small mb-0">${formatFileSize(doc.file_size)} • ${doc.file_type.toUpperCase()}</p>
+                            </div>
+                            <div class="flex-shrink-0 ms-2">
+                                <a href="${doc.file_path}" target="_blank" class="btn btn-sm btn-outline-primary" title="View/Download">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            documentsContainer.innerHTML = `
+                <div class="col-12 text-center py-4">
+                    <i class="bi bi-file-earmark-x display-4 text-muted mb-3 d-block"></i>
+                    <p class="text-muted">No documents shared yet.</p>
+                </div>
+            `;
+        }
+    }
 }
 
 /**
@@ -1629,6 +1718,24 @@ async function deleteDocumentById(documentId) {
 }
 
 /**
+ * Get Bootstrap icon class based on file extension
+ */
+function getFileIcon(fileType) {
+    if (!fileType) return 'bi-file-earmark';
+    const type = fileType.toLowerCase();
+
+    if (type.includes('pdf')) return 'bi-file-earmark-pdf text-danger';
+    if (type.includes('doc') || type.includes('word')) return 'bi-file-earmark-word text-primary';
+    if (type.includes('xls') || type.includes('excel') || type.includes('sheet')) return 'bi-file-earmark-excel text-success';
+    if (type.includes('ppt') || type.includes('powerpoint') || type.includes('presentation')) return 'bi-file-earmark-ppt text-warning';
+    if (type.includes('zip') || type.includes('rar') || type.includes('archive')) return 'bi-file-earmark-zip text-secondary';
+    if (type.includes('jpg') || type.includes('jpeg') || type.includes('png') || type.includes('image')) return 'bi-file-earmark-image text-info';
+    if (type.includes('text') || type.includes('txt')) return 'bi-file-earmark-text';
+
+    return 'bi-file-earmark';
+}
+
+/**
  * Format file size for display
  */
 function formatFileSize(bytes) {
@@ -1785,7 +1892,7 @@ async function loadViewer() {
 
         if (result.success) {
             if (type === 'member') {
-                displayMemberView(data.user, data.skills || [], result.is_owner);
+                displayMemberView(data.user, data.skills || [], result.is_owner, data.projects || [], data.documents || []);
             } else if (type === 'project') {
                 displayProjectView(data.project, result.is_owner);
             }
@@ -1809,7 +1916,7 @@ async function loadViewer() {
 /**
  * Display Member Profile in Viewer
  */
-function displayMemberView(user, skills, isOwner = false) {
+function displayMemberView(user, skills, isOwner = false, projects = [], documents = []) {
 
     const container = document.getElementById('viewContent');
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
@@ -1837,7 +1944,7 @@ function displayMemberView(user, skills, isOwner = false) {
                         <p class="fs-4 opacity-75 mb-3">${escapeHtml(user.job_title || 'Software Developer')}</p>
                         <div class="d-flex gap-3 flex-wrap">
                             ${user.email ? `<span class="badge bg-white text-primary px-3 py-2"><i class="bi bi-envelope me-2"></i>${escapeHtml(user.email)}</span>` : ''}
-                            ${user.github_url ? `<a href="${user.github_url}" target="_blank" class="btn btn-sm btn-light px-3"><i class="bi bi-github me-2"></i>GitHub</a>` : ''}
+                            ${user.github_url ? `<a href="${ensureAbsoluteUrl(user.github_url)}" target="_blank" class="btn btn-sm btn-light px-3"><i class="bi bi-github me-2"></i>GitHub</a>` : ''}
                             ${user.cv_path ? `<a href="${user.cv_path}" download class="btn btn-sm btn-success px-3"><i class="bi bi-file-earmark-person me-2"></i>Download CV</a>` : ''}
                         </div>
                     </div>
@@ -1852,6 +1959,28 @@ function displayMemberView(user, skills, isOwner = false) {
                         <div class="card-body p-4">
                             <h3 class="fw-bold mb-4">About Me</h3>
                             <p class="lead text-muted">${user.bio ? escapeHtml(user.bio).replace(/\n/g, '<br>') : 'No bio provided.'}</p>
+                        </div>
+                    </div>
+
+                    <!-- Projects Section -->
+                    <div class="mb-4">
+                        <h3 class="fw-bold mb-4 d-flex align-items-center">
+                            <i class="bi bi-folder me-2 text-primary"></i>Projects
+                            <span class="badge bg-light text-primary ms-3 fs-6 p-2 rounded-circle border" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">${projects.length}</span>
+                        </h3>
+                        <div class="row g-4" id="memberProjects">
+                            <!-- Projects will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Documents Section -->
+                    <div>
+                        <h3 class="fw-bold mb-4 d-flex align-items-center">
+                            <i class="bi bi-file-earmark-text me-2 text-primary"></i>Documents
+                            <span class="badge bg-light text-primary ms-3 fs-6 p-2 rounded-circle border" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">${documents.length}</span>
+                        </h3>
+                        <div class="row g-3" id="memberDocuments">
+                            <!-- Documents will be rendered here -->
                         </div>
                     </div>
                 </div>
@@ -1886,6 +2015,61 @@ function displayMemberView(user, skills, isOwner = false) {
         }).join('');
     } else if (skillsContainer) {
         skillsContainer.innerHTML = '<p class="text-muted">No skills listed</p>';
+    }
+
+    // Render projects
+    const projectsContainer = document.getElementById('memberProjects');
+    if (projectsContainer) {
+        if (projects && projects.length > 0) {
+            projectsContainer.innerHTML = projects.map(project => `
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm hover-up">
+                        ${project.screenshot ? `<img src="${project.screenshot}" class="card-img-top" alt="${project.title}" style="height: 180px; object-fit: cover;">` : ''}
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-2">${escapeHtml(project.title)}</h5>
+                            <p class="text-muted small mb-3 text-truncate-3">${escapeHtml(project.description)}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <a href="view.html?type=project&id=${project.id}" class="btn btn-sm btn-primary px-3">View Details</a>
+                                ${project.github_url ? `<a href="${ensureAbsoluteUrl(project.github_url)}" target="_blank" class="text-dark"><i class="bi bi-github fs-5"></i></a>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            projectsContainer.innerHTML = '<div class="col-12"><div class="alert alert-light text-center py-4 border">No projects published yet.</div></div>';
+        }
+    }
+
+    // Render documents
+    const documentsContainer = document.getElementById('memberDocuments');
+    if (documentsContainer) {
+        if (documents && documents.length > 0) {
+            documentsContainer.innerHTML = documents.map(doc => `
+                <div class="col-md-6">
+                    <div class="card h-100 border-0 shadow-sm hover-up">
+                        <div class="card-body p-3 d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded p-3">
+                                    <i class="bi ${getFileIcon(doc.file_type)} fs-3"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 min-width-0">
+                                <h6 class="fw-bold mb-1 text-truncate">${escapeHtml(doc.title)}</h6>
+                                <p class="text-muted small mb-0">${formatFileSize(doc.file_size)} • ${doc.file_type.toUpperCase()}</p>
+                            </div>
+                            <div class="flex-shrink-0 ms-2">
+                                <a href="${doc.file_path}" target="_blank" class="btn btn-sm btn-light rounded-circle shadow-sm" title="Download">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            documentsContainer.innerHTML = '<div class="col-12"><div class="alert alert-light text-center py-4 border">No documents shared yet.</div></div>';
+        }
     }
 }
 
@@ -1955,4 +2139,32 @@ function displayProjectView(project, isOwner = false) {
             </div>
         </div>
     `;
+}
+/**
+ * Get relative URL path from storage path
+ */
+function getRelativeUrlPath(path) {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    // Remove leading slashes or ../ as the backend might return different formats
+    return path.replace(/^(\.\.\/|\/)+/, '');
+}
+
+/**
+ * Ensure URL is absolute by adding https:// if missing
+ */
+function ensureAbsoluteUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    return 'https://' + url;
+}
+
+/**
+ * Escape HTML special characters
+ */
+function escapeHtml(string) {
+    if (!string) return '';
+    const div = document.createElement('div');
+    div.textContent = string;
+    return div.innerHTML;
 }

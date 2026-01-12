@@ -51,6 +51,17 @@ try {
     
     // Check if this is the current user viewing their own profile
     $isOwner = ($profileUserId && $profileUserId == getCurrentUserId());
+    
+    // Fetch user's projects
+    $stmt = $pdo->prepare("SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$profileUserId]);
+    $projects = $stmt->fetchAll();
+    
+    // Fetch user's documents
+    $stmt = $pdo->prepare("SELECT * FROM documents WHERE user_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$profileUserId]);
+    $documents = $stmt->fetchAll();
+    
     $success = true;
 } catch (PDOException $e) {
     error_log("Profile Fetch Error: " . $e->getMessage());
@@ -221,6 +232,8 @@ if ($isAjax || (!empty($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERE
         'errors' => $errors,
         'user' => $userData,
         'skills' => $skillsArray,
+        'projects' => $projects ?? [],
+        'documents' => $documents ?? [],
         'is_owner' => $isOwner
     ]);
     exit();
